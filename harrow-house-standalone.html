@@ -1,0 +1,1152 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>
+<title>Harrow House</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=IM+Fell+English:ital@0;1&family=Courier+Prime:wght@400;700&display=swap">
+<style>
+/* Layout: one full-bleed canvas stage, letterboxed; DOM case-file cards float over it for menus. Deliberately single dark "noir" look. */
+:root{
+  --ink:#0c0e13; --ink-2:#161a22; --paper:#e8dcc0; --paper-dim:#b9ad93;
+  --brass:#c9a24a; --blood:#9b2f2f; --fog:#717a8c;
+  --f-display:"IM Fell English SC","IM Fell English",Georgia,"Times New Roman",serif;
+  --f-body:"Courier Prime","Courier New",Courier,monospace;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--ink);color:var(--paper);font-family:var(--f-body);overflow:hidden;
+  padding-left:max(0px,env(safe-area-inset-left,0px));padding-right:max(0px,env(safe-area-inset-right,0px))}
+#stage{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(ellipse at center,#1a1d26 0%,var(--ink) 70%)}
+canvas{display:block;image-rendering:auto;box-shadow:0 0 0 1px #2a2c35,0 30px 80px #000}
+#ui{position:fixed;inset:0;display:grid;place-items:center;overflow:auto;
+  padding-block:24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:rgba(6,7,10,.72);backdrop-filter:blur(2px)}
+.card{width:min(560px,100%);background:var(--paper);color:#241c12;padding:28px 28px 24px;position:relative;
+  box-shadow:0 2px 0 #c8b994,0 24px 60px rgba(0,0,0,.6);transform:rotate(-.4deg);
+  background-image:repeating-linear-gradient(0deg,transparent 0 27px,rgba(80,60,30,.08) 27px 28px)}
+.card::before{content:"CONFIDENTIAL";position:absolute;top:14px;right:18px;font:700 11px/1 var(--f-body);letter-spacing:.2em;color:var(--blood);border:2px solid var(--blood);padding:4px 6px;transform:rotate(6deg);opacity:.75}
+h1{font:400 clamp(44px,9vw,72px)/.95 var(--f-display);margin:0 0 6px;color:#1a120a;text-wrap:balance;letter-spacing:.01em}
+h2{font:400 30px/1.05 var(--f-display);margin:0 0 10px;text-wrap:balance}
+.eyebrow{font:700 11px/1 var(--f-body);letter-spacing:.22em;text-transform:uppercase;color:#7a5a24;margin-bottom:14px}
+p{margin:0 0 12px;font-size:15px;line-height:1.5;max-width:62ch}
+.muted{color:#6a5b44;font-size:13px}
+.stack{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+button,.btn{font:700 15px/1 var(--f-body);letter-spacing:.04em;background:#1d1a16;color:var(--paper);border:0;padding:14px 16px;text-align:left;cursor:pointer;
+  display:flex;justify-content:space-between;align-items:center;gap:12px;outline:none;transition:transform .08s,background .12s}
+button .k{font-weight:400;color:var(--brass);font-size:12px;letter-spacing:.08em}
+button:hover,button:focus-visible,button.focus{background:var(--blood);transform:translateX(4px)}
+button:disabled{opacity:.4;cursor:not-allowed;transform:none;background:#1d1a16}
+button.ghost{background:transparent;color:#241c12;border:1.5px solid #241c12}
+button.ghost:hover,button.ghost:focus-visible,button.ghost.focus{background:#241c12;color:var(--paper)}
+label{font:700 11px/1 var(--f-body);letter-spacing:.18em;text-transform:uppercase;color:#7a5a24;display:block;margin-bottom:6px}
+input{font:700 18px/1 var(--f-body);background:#f6eedb;border:1.5px solid #241c12;padding:11px 12px;width:100%;color:#1a120a;outline:none}
+input:focus-visible,input.focus{box-shadow:0 0 0 3px var(--brass)}
+.field{flex:1;min-width:0}
+.code{font:700 42px/1 var(--f-body);letter-spacing:.3em;color:var(--blood);margin:4px 0 10px}
+.roster{list-style:none;padding:0;margin:12px 0;display:grid;gap:6px}
+.roster li{display:flex;gap:10px;align-items:center;font-size:15px;padding:8px 10px;background:rgba(36,28,18,.07)}
+.roster .dot{width:14px;height:14px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 2px rgba(0,0,0,.35)}
+.roster .dev{margin-left:auto;font-size:12px;color:#6a5b44}
+.roster li.empty{color:#8a7a60;font-style:italic}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:14px;margin:8px 0 14px}
+.keys b{color:var(--blood)}
+.note{font-size:13px;border-left:3px solid var(--brass);padding:6px 10px;background:rgba(201,162,74,.12);margin:10px 0}
+#chat{position:fixed;left:max(12px,env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));width:min(360px,calc(100% - 24px));pointer-events:none;display:flex;flex-direction:column;gap:4px}
+#chatlog div{font-size:13px;background:rgba(10,11,15,.78);padding:5px 8px;color:var(--paper);border-left:3px solid var(--brass);transition:opacity .6s}
+#chatin{pointer-events:auto;font-size:14px;background:rgba(10,11,15,.92);color:var(--paper);border:1px solid var(--brass)}
+#voicebar{position:fixed;right:max(12px,env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));display:flex;gap:8px}
+#voicebar button{font-size:12px;padding:9px 12px;background:rgba(10,11,15,.88);border:1px solid var(--brass)}
+#voicebar button.on{background:var(--blood)}
+@media (prefers-reduced-motion:reduce){button{transition:none}.card{transform:none}}
+</style>
+
+<div id="stage"><canvas id="cv" width="1920" height="1088" aria-label="Harrow House game view"></canvas></div>
+<div id="ui"></div>
+<div id="chat"><div id="chatlog"></div><input id="chatin" hidden maxlength="140" placeholder="Say something, then Enter" aria-label="Chat message"></div>
+<div id="voicebar" hidden><button id="micbtn" type="button">Mic off <span class="k">V</span></button></div>
+
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js" onerror="var s=document.createElement('script');s.src='https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';document.head.appendChild(s)"></script>
+<script>
+"use strict";
+/* =========================================================================
+   HARROW HOUSE — a 1–4 player cooperative murder mystery
+   Host-authoritative: the host (or local machine) simulates; clients send
+   input and render the state they receive.
+   ========================================================================= */
+const TS=32, COLS=30, ROWS=16, HUD=32, W=960, H=ROWS*TS+HUD;
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+ctx.scale(2,2);
+const COLORS=['#d9b04a','#5aa4c9','#c95a6a','#7cbf6a'];
+const CNAMES=['Brass','Steel','Crimson','Moss'];
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const cid=Math.random().toString(36).slice(2,10);
+const $=s=>document.querySelector(s);
+
+/* ---------------------------- WORLD DATA ---------------------------- */
+const ROOMS={
+ foyer:{name:'The Grand Foyer',floor:'wood',dark:.62,
+  furn:[[2,2,3,1,'table'],[25,2,3,1,'table'],[10,5,10,6,'rug'],[7,4,1,1,'pillar'],[22,4,1,1,'pillar'],[7,11,1,1,'pillar'],[22,11,1,1,'pillar'],
+        [1,13,1,2,'plant'],[28,13,1,2,'plant'],[4,14,3,1,'board'],[25,13,1,1,'rack'],[12,1,1,1,'plant'],[17,1,1,1,'plant']],
+  doors:[{x:14,y:0,to:'study',sx:14,sy:14},{x:0,y:8,to:'library',sx:28,sy:8},{x:29,y:8,to:'drawing',sx:1,sy:8},{x:14,y:15,to:'greenhouse',sx:14,sy:1,lock:'ghKey'}],
+  lamps:[[3.5,2.5,3],[26.5,2.5,3]], windows:[[4,0],[9,0],[20,0],[25,0]],
+  spots:[{id:'portrait',x:9,y:1,l:'Portrait'},{id:'telegram',x:3,y:2,l:'Telegram'},{id:'coat',x:25,y:13,l:'Coat rack'},{id:'board',x:5,y:14,l:'Case board'}]},
+ study:{name:"Harrow's Study",floor:'carpet',dark:.74,
+  furn:[[12,4,6,2,'desk'],[5,1,4,1,'fire'],[24,1,1,1,'safe'],[10,2,1,1,'chair'],[1,6,1,6,'shelfv'],[25,6,3,1,'shelf'],[25,10,3,1,'shelf'],[5,3,4,3,'outline'],[14,6,2,1,'chairs']],
+  doors:[{x:14,y:15,to:'foyer',sx:14,sy:1}],
+  lamps:[[15,4,3.5]], windows:[[29,7],[29,8]],
+  spots:[{id:'body',x:7,y:4,l:'Chalk outline'},{id:'tea',x:13,y:4,l:'Teacup'},{id:'clock',x:7,y:1,l:'Mantel clock'},{id:'safe',x:24,y:1,l:'Wall safe'},{id:'calendar',x:19,y:1,l:'Calendar'},{id:'window',x:28,y:8,l:'Window'}]},
+ library:{name:'The Library',floor:'wood2',dark:.72,
+  furn:[[1,1,5,1,'shelf'],[6,1,1,1,'shelf',0,'booksOpen'],[7,1,8,1,'shelf'],[16,1,5,1,'pshelf'],[21,1,8,1,'shelf'],
+        [3,5,8,1,'shelf'],[3,9,8,1,'shelf'],[19,5,8,1,'shelf'],[19,9,8,1,'shelf'],[13,12,4,2,'table'],[14,7,1,1,'lectern'],[1,13,1,2,'plant']],
+  doors:[{x:29,y:8,to:'foyer',sx:1,sy:8},{x:6,y:0,to:'cellar',sx:6,sy:1,req:'booksOpen'}],
+  lamps:[[15,12.5,3],[14.5,7.5,2]], windows:[],
+  spots:[{id:'books',x:18,y:1,l:'Poetry shelf'},{id:'lectern',x:14,y:7,l:'Lectern'},{id:'chair',x:16,y:13,l:'Reading table'}]},
+ drawing:{name:'The Drawing Room',floor:'carpet2',dark:.6,
+  furn:[[11,1,8,1,'fire'],[9,4,4,1,'sofa'],[17,4,4,1,'sofa'],[12,7,6,2,'table'],[24,11,3,2,'piano'],[2,12,2,1,'sofa'],[28,1,1,1,'plant'],[1,1,1,1,'plant']],
+  doors:[{x:0,y:8,to:'foyer',sx:28,sy:8}],
+  lamps:[[15,8,3.5]], windows:[[29,5],[29,10]],
+  spots:[{id:'vivian',x:8,y:6,l:'Vivian Harrow',npc:'#b56aa8',nm:'Vivian'},{id:'crane',x:21,y:6,l:'Dr. Silas Crane',npc:'#e0e0e0',nm:'Dr. Crane'},
+         {id:'pell',x:7,y:11,l:'Margaret Pell',npc:'#5e6b8f',nm:'Mrs. Pell'},{id:'voss',x:21,y:11,l:'Julian Voss',npc:'#8f6a3a',nm:'Mr. Voss'},
+         {id:'piano',x:25,y:11,l:'Piano'}]},
+ greenhouse:{name:'The Conservatory',floor:'tile',dark:.42,
+  furn:[[3,3,5,2,'bed'],[22,3,5,2,'bed'],[3,9,5,2,'bed'],[22,9,5,2,'bed'],[12,9,6,2,'foxbed'],[12,4,6,1,'bench'],[25,13,1,1,'smalltable'],[1,1,1,1,'plant'],[28,1,1,1,'plant'],[1,14,1,1,'plant']],
+  doors:[{x:14,y:0,to:'foyer',sx:14,sy:14}],
+  lamps:[], windows:[[0,4],[0,11],[29,4],[29,11],[5,15],[24,15]], glass:true,
+  spots:[{id:'foxglove',x:14,y:9,l:'Foxglove bed'},{id:'mortar',x:14,y:4,l:'Potting bench'},{id:'glog',x:25,y:13,l:'Watering log'}]},
+ cellar:{name:'The Hidden Cellar',floor:'stone',dark:.86,secret:true,
+  furn:[[22,1,3,1,'cabinet'],[2,5,3,2,'desk'],[12,4,3,1,'table'],[26,5,2,2,'crate'],[27,9,1,1,'barrel'],[26,10,1,1,'barrel'],[1,10,1,1,'barrel'],
+        [5,13,1,1,'lever'],[25,13,1,1,'lever'],[6,1,0,0,'stairs']],
+  doors:[{x:6,y:0,to:'library',sx:6,sy:2},{x:15,y:15,to:'boathouse',sx:15,sy:1,lock:'gateOpen',gate:1}],
+  lamps:[[3.5,5.5,2.5],[13.5,4.5,2.2]], windows:[],
+  spots:[{id:'cabinet',x:23,y:1,l:'Filing cabinet'},{id:'cipher',x:3,y:5,l:"Harrow's desk"},{id:'ledger',x:13,y:4,l:'Ledger'},{id:'eleanor',x:10,y:1,l:'Photograph'},
+         {id:'leverA',x:5,y:13,l:'Left lever'},{id:'leverB',x:25,y:13,l:'Right lever'}]},
+ boathouse:{name:'The Boathouse',floor:'planks',dark:.7,secret:true,
+  furn:[[1,10,28,5,'water'],[14,9,2,4,'jetty'],[9,11,4,2,'boat'],[5,5,1,1,'crate'],[23,4,3,1,'table'],[1,1,2,1,'crate'],[27,1,2,2,'crate'],[13,6,4,2,'mud']],
+  doors:[{x:15,y:0,to:'cellar',sx:15,sy:14}],
+  lamps:[[24.5,4.5,3]], windows:[[29,6]],
+  spots:[{id:'bag',x:5,y:5,l:'Medical bag'},{id:'boatlog',x:24,y:4,l:'Boat log'},{id:'mud',x:15,y:7,l:'Footprints'}]}
+};
+const WALKABLE={rug:1,outline:1,mud:1,jetty:1,stairs:1};
+
+const CLUES={
+ motto:{t:"Harrow's motto",s:'"Three steps back to the truth." Engraved on the portrait plaque.'},
+ body:{t:'The body',s:'No wounds. Bluish lips, dilated pupils. Heart failure, or poison.'},
+ tea:{t:'Bitter tea',s:'Cold tea with a bitter, green smell. Something was added.'},
+ clock:{t:'Stopped clock',s:'Knocked over in the fall. Time of death: 11:47 PM.'},
+ calendar:{t:'Calendar',s:'Nov 1: "Dr. C — tonic, 9:30." Nov 2 circled: "BOARD".'},
+ diary:{t:"Harrow's diary",s:'He blackmailed his guests, Crane most of all. Papers hidden "below the poets — Rust, Sea, Moss, Gold".'},
+ poisonbook:{t:'Book of poisons',s:'Foxglove (digitalis) slows the heart until it stops. Looks like heart failure.'},
+ foxglove:{t:'Cut foxgloves',s:'Several stems cut recently. The sap is still wet.'},
+ mortar:{t:'Mortar & gloves',s:'Green residue in a mortar. Thin surgical gloves, not gardening gloves.'},
+ glog:{t:'Watering log',s:'Oct 31: Dr. Crane asked about the foxgloves "for a tincture".'},
+ vivian:{t:'Vivian’s account',s:'In her room all night. Heard the doctor’s car leave around ten.'},
+ crane:{t:'Crane’s account',s:'Brought the tonic at 9:30, left by ten. Calls it heart failure.'},
+ pell:{t:'Pell’s account',s:'Brewed the tea at nine. Crane carried the tray up himself.'},
+ voss:{t:'Voss’s account',s:'Argued over the accounts Tuesday. In the billiard room until midnight.'},
+ dossiers:{t:'Four dossiers',s:'SECRET: Harrow blackmailed every guest. Crane’s file: Eleanor died of his drunken overdose.'},
+ ledger:{t:'Blackmail ledger',s:'Crane stopped paying in October. "Then the Board shall have it."'},
+ eleanor:{t:'Eleanor’s photo',s:'SECRET: Harrow turned to blackmail after his wife’s death.'},
+ cipher:{t:"Harrow's cipher",s:'"THE ONE WHO HEALS ME MEANS TO KILL ME."'},
+ vial:{t:'Empty vial',s:'Crane’s bag: an empty vial, "Tinct. Digitalis — S.C."'},
+ boatlog:{t:'Boat log',s:'"Nov 2, 12:40 AM — S. Crane." He came back after the death.'},
+ mud:{t:'Footprints',s:'Fresh prints from the jetty to the tunnel. A man’s city shoes.'},
+ vivian2:{t:'Vivian’s secret',s:'Gambling debts. But Harrow’s will leaves everything to charity.'},
+ crane2:{t:'Crane’s secret',s:'He refuses to discuss Eleanor’s death without counsel.'},
+ pell2:{t:'Pell’s secret',s:'SECRET: She is Harrow’s unacknowledged daughter.'},
+ voss2:{t:'Voss’s secret',s:'He skimmed from the firm. A dead Harrow means an audit.'}
+};
+const CLUE_TOTAL=Object.keys(CLUES).length;
+
+const TEXT={
+ intro:{t:'Telegram · Blackmoor Constabulary',p:[
+  'TO THE DETECTIVES. STOP. EDMUND HARROW, 71, CLOCKMAKER, FOUND DEAD IN HIS STUDY AT HARROW HOUSE, NIGHT OF NOVEMBER 1. STOP.',
+  'DOOR LOCKED FROM INSIDE. NO WOUND. CORONER BAFFLED. MY MEN MORE SO. STOP. FOUR GUESTS REMAIN IN THE HOUSE UNTIL THE STORM CLEARS. STOP.',
+  'SEARCH THE HOUSE. UNCOVER WHAT HARROW HID. NAME THE KILLER AT THE CASE BOARD IN THE FOYER. STOP. — INSPECTOR ROURKE']},
+ telegram:{t:'Telegram',p:['Inspector Rourke\'s telegram. "Search the house. Uncover what Harrow hid. Name the killer at the case board in the foyer." The case board stands by the south wall.']},
+ portrait:{t:'Portrait',p:['A portrait of Edmund Harrow beside his late wife, Eleanor. She died eight years ago, after a short illness.','A brass plaque beneath it reads: "E. HARROW, CLOCKMAKER. Three steps back to the truth."']},
+ coat:{t:'Coat rack',p:['Harrow\'s heavy overcoat, still damp. In the inner pocket you find a small iron key on a tag marked CONSERVATORY.','You take the key. The conservatory door is at the south end of the foyer.']},
+ coat2:{t:'Coat rack',p:['Harrow\'s overcoat. The pockets are empty now.']},
+ body:{t:'Chalk outline',p:['The police chalk outline lies before the hearth. Their notes: no wounds, lips bluish, pupils dilated, a teacup overturned nearby.','The coroner wrote "heart failure?" and then crossed out the question mark, then wrote it again.']},
+ tea:{t:'Teacup',p:['A second cup on the desk, half full and long cold. The tea smells bitter, with a faint green, leafy note.','Someone put more than sugar in this.']},
+ clock:{t:'Mantel clock',p:['A fine brass mantel clock, one of Harrow\'s own. It was knocked crooked, as if he grabbed the mantel as he fell.','The hands stopped at 11:47.']},
+ calendar:{t:'Calendar',p:['A desk calendar. Under November 1: "Dr. C — tonic, 9:30."','November 2 is circled hard in red ink, with one word: BOARD.']},
+ window:{t:'Window',p:['The latch is fastened from inside, and the rain is hammering the glass. Nobody came in or out this way.']},
+ safeOpen:{t:'Wall safe',p:['The dial clicks into place: 11-47. The door swings open.','Inside is Harrow\'s diary. The last page reads: "They all pay me, and they all hate me for it. Crane most of all."','"My papers sleep below the poets. Rust, then Sea, then Moss, then Gold." And at the bottom: "Nov 2 — Eleanor\'s file goes to the Medical Board."']},
+ safeDone:{t:'Wall safe',p:['The safe stands open and empty. You have the diary.']},
+ lectern:{t:'Lectern',p:['An open book: Poisons of the English Garden. The page on Digitalis purpurea, the foxglove, is dog-eared.','"In measured doses it steadies the heart. In excess it slows the heart, then stops it. The victim appears to die of simple heart failure, some hours after the dose."']},
+ chair:{t:'Reading table',p:['A pair of spectacles and an unfinished letter: "Silas, you had your chance to pay. Eleanor deserved better than you."']},
+ booksOpen:{t:'Poetry shelf',p:['Red, blue, green, gold. With the last pull, something clicks inside the wall.','At the far left of the north wall, a section of shelving swings inward. Stone steps lead down into the dark.']},
+ booksDone:{t:'Poetry shelf',p:['The poets are back in their places. The hidden passage stays open at the north-west wall.']},
+ piano:{t:'Piano',p:['A sheet of music on the stand: "For Eleanor". Someone has played it so often the pages are soft as cloth.']},
+ foxglove:{t:'Foxglove bed',p:['Tall purple foxgloves crowd the bed. Several stems have been cut cleanly near the base.','The sap on the cuts is still wet. This was done within the last day or two.']},
+ mortar:{t:'Potting bench',p:['A stone mortar and pestle, wiped in a hurry. There is green residue in the grooves.','Beside it lies a pair of thin rubber surgical gloves. No gardener here would wear those.']},
+ glog:{t:'Watering log',p:['Mrs. Pell\'s watering log, in a neat hand.','"Oct 31 — Dr. Crane asked to see the foxgloves. Said he wanted them for a tincture for Mr. H\'s heart."']},
+ cabinet:{t:'Filing cabinet',p:['Four thick dossiers, one for each guest. Edmund Harrow, the respected clockmaker, was a blackmailer.','VIVIAN HARROW: gambling debts, settled by Harrow, with monthly "repayments". JULIAN VOSS: proof of money skimmed from Harrow & Voss Ltd.','MARGARET PELL: a birth certificate. Father: Edmund Harrow.','DR. SILAS CRANE: a nurse\'s sworn statement. On the night Eleanor Harrow died, Dr. Crane was drunk and gave her a fatal overdose.']},
+ ledger:{t:'Ledger',p:['A ledger of payments, month by month, from all four guests.','Crane\'s payments stop in October. Harrow wrote beside them: "He refuses. Then the Board shall have it."']},
+ eleanor:{t:'Photograph',p:['Eleanor Harrow in her garden, laughing at whoever held the camera.','On the back, in Edmund\'s hand: "Forgive me for what I have become since you left."']},
+ cipherDone:{t:"Harrow's desk",p:['The decoded note reads: THE ONE WHO HEALS ME MEANS TO KILL ME.','Harrow suspected his own doctor.']},
+ leverHint:{t:'Lever',p:['A rusted lever, linked by chains to the iron gate in the south wall. It springs back after a few seconds. Both levers must be down together.']},
+ bag:{t:'Medical bag',p:['A doctor\'s bag, monogrammed S.C., left on a crate as if dropped in a hurry.','Inside: a stethoscope, bandages, and an empty glass vial labelled "Tinct. Digitalis — S.C. Dispensary".']},
+ boatlog:{t:'Boat log',p:['The boathouse sign-out book. The newest line is smudged by wet fingers.','"Nov 2, 12:40 AM — S. Crane." He rowed back across the lake an hour after Harrow died.']},
+ mud:{t:'Footprints',p:['Fresh muddy prints run from the jetty to the tunnel. Narrow city shoes, not boots.','He came back for the dossier, but never got past the poets.']},
+ vivian:{t:'Vivian Harrow, niece',p:['"Uncle Edmund was cruel, but he was family. I was in my room all night, reading."','"I heard the doctor\'s car leave around ten. Then nothing until Mrs. Pell screamed."']},
+ vivian2:{t:'Vivian Harrow, niece',p:['"So you found his files. Yes, he paid my debts, and he made me beg for it every month."','"But I needed him alive. His will leaves everything to charity. His death gives me nothing."']},
+ crane:{t:'Dr. Silas Crane, physician',p:['"Edmund had a weak heart. I brought his tonic at half past nine and was gone by ten."','"Heart failure. Tragic, but hardly a mystery. I fail to see why the police need detectives."']},
+ crane2:{t:'Dr. Silas Crane, physician',p:['His jaw tightens when you mention Eleanor.','"Eleanor\'s death was an accident. Edmund turned it into a weapon. I won\'t say another word without my solicitor."']},
+ pell:{t:'Margaret Pell, housekeeper',p:['"I brewed Mr. Harrow\'s tea at nine, same as every night of the last twenty years."','"The doctor took the tray up himself. He said he\'d see that Mr. Harrow took his tonic with it."']},
+ pell2:{t:'Margaret Pell, housekeeper',p:['She is quiet for a long moment. "Yes. Edmund Harrow was my father. He never once said so."','"I stayed to be near him. I wanted him to say my name, just once. I would never have hurt him."']},
+ voss:{t:'Julian Voss, business partner',p:['"Twenty years partners. We argued about the accounts on Tuesday, that\'s all."','"I was in the billiard room with the brandy until midnight. Ask the decanter."']},
+ voss2:{t:'Julian Voss, business partner',p:['"All right. I skimmed. Edmund knew."','"But a dead Harrow means his executors audit the firm. I\'m ruined either way. Why would I kill him?"']},
+ wrong:{t:'Inspector Rourke',p:['Rourke reads your accusation twice and shakes his head.','"That won\'t hold up in court, detectives. Look again."']},
+ partial:{t:'Inspector Rourke',p:['"You\'ve got the right person, I\'d wager my pension on it. But the motive or the method is off."','"Give me all three, or the solicitors will tear it apart."']},
+ win:{t:'Case closed',p:[
+  'Dr. Silas Crane killed Edmund Harrow.',
+  'For eight years Harrow bled Crane for money, holding proof that Crane, drunk, gave Eleanor Harrow a fatal overdose. In October Crane stopped paying. Harrow vowed to send the file to the Medical Board on November 2.',
+  'On October 31 Crane cut foxgloves in the conservatory and ground a digitalis tincture. At 9:30 on November 1 he carried Harrow\'s tea tray up himself, added the dose, and left by ten.',
+  'Harrow locked himself in his study as always. The poison worked slowly. At 11:47 his heart stopped, and he knocked the clock as he fell. A locked room with no killer inside.',
+  'At 12:40 AM Crane rowed back and crept through the tunnel to steal the dossier. He never solved the poets\' shelf. You did.',
+  'Inspector Rourke makes the arrest at dawn, as the storm breaks over Blackmoor.']},
+ lose:{t:'The case goes cold',p:['Three accusations, three failures. Rourke takes the file back without a word.','By morning the roads are clear, the guests are gone, and the killer is free. Perhaps another team will try.']}
+};
+
+/* ---------------------------- HELPERS ---------------------------- */
+function solidGrid(rid,fl){
+  const R=ROOMS[rid], g=[];
+  for(let y=0;y<ROWS;y++){g.push([]);for(let x=0;x<COLS;x++)g[y].push(x===0||y===0||x===COLS-1||y===ROWS-1?1:0)}
+  for(const d of R.doors){ if(!d.req||fl[d.req]) g[d.y][d.x]=0 }
+  for(const f of R.furn){
+    const [x,y,w,h,k,,until]=f; if(until&&fl[until])continue;
+    const s=WALKABLE[k]?0:1;
+    for(let j=y;j<y+h;j++)for(let i=x;i<x+w;i++) if(g[j]&&g[j][i]!==undefined && !(j===0||i===0||j===ROWS-1||i===COLS-1)) g[j][i]=s;
+  }
+  for(const s of R.spots) if(s.npc) g[s.y][s.x]=1;
+  return g;
+}
+const gridCache={};
+function gridFor(rid,fl){const k=rid+(fl.booksOpen?1:0)+(fl.gateOpen?1:0);return gridCache[k]||(gridCache[k]=solidGrid(rid,fl))}
+function wrap(c,text,maxW){
+  const words=text.split(' '),lines=[];let line='';
+  for(const w of words){const t=line?line+' '+w:w; if(c.measureText(t).width>maxW&&line){lines.push(line);line=w}else line=t}
+  if(line)lines.push(line);return lines;
+}
+function hash(x,y){let h=(x*374761393+y*668265263)^0x5bd1e995;h=(h^(h>>>13))*1274126177;return ((h^(h>>>16))>>>0)/4294967296}
+function caesar(s,k){return s.replace(/[A-Z]/g,c=>String.fromCharCode((c.charCodeAt(0)-65+k+26)%26+65))}
+const CIPHER_PLAIN='THE ONE WHO HEALS ME MEANS TO KILL ME';
+const CIPHER_ENC=caesar(CIPHER_PLAIN,3);
+const BOOKS=[{c:'#a8352c',n:'Rust'},{c:'#2f5f9e',n:'Sea'},{c:'#3f7a3a',n:'Moss'},{c:'#c9a24a',n:'Gold'},{c:'#6b3f8a',n:'Plum'},{c:'#2a2a2a',n:'Soot'}];
+const BOOK_ORDER=[0,1,2,3];
+const ACCUSE=[
+ {l:'Suspect',o:['Vivian Harrow','Dr. Silas Crane','Margaret Pell','Julian Voss']},
+ {l:'Motive',o:['Inheritance','Hiding embezzlement','Silencing the truth about Eleanor\'s death','Revenge for being disowned']},
+ {l:'Method',o:['Struck with the fire poker','Digitalis (foxglove) in his tea','Strangled in his chair','Arsenic in the brandy']}
+];
+const ANSWER=[1,2,1];
+
+/* ---------------------------- AUDIO ---------------------------- */
+let AC=null, master=null;
+function audioInit(){
+  if(AC)return; try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){return}
+  master=AC.createGain();master.gain.value=.5;master.connect(AC.destination);
+  // rain bed: filtered noise
+  const len=AC.sampleRate*2,buf=AC.createBuffer(1,len,AC.sampleRate),d=buf.getChannelData(0);let last=0;
+  for(let i=0;i<len;i++){const w=Math.random()*2-1;last=(last+.02*w)/1.02;d[i]=last*3.5}
+  const src=AC.createBufferSource();src.buffer=buf;src.loop=true;
+  const f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=900;
+  const g=AC.createGain();g.gain.value=.22;src.connect(f);f.connect(g);g.connect(master);src.start();
+  // drone
+  const o=AC.createOscillator(),og=AC.createGain();o.type='sine';o.frequency.value=55;og.gain.value=.03;o.connect(og);og.connect(master);o.start();
+}
+function tone(freq,dur,type='sine',vol=.2,slide=0,delay=0){
+  if(!AC)return;const t=AC.currentTime+delay,o=AC.createOscillator(),g=AC.createGain();
+  o.type=type;o.frequency.setValueAtTime(freq,t);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(30,freq+slide),t+dur);
+  g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g);g.connect(master);o.start(t);o.stop(t+dur+.05);
+}
+function noiseBurst(dur,vol,freq){
+  if(!AC)return;const len=AC.sampleRate*dur,b=AC.createBuffer(1,len,AC.sampleRate),d=b.getChannelData(0);
+  for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2);
+  const s=AC.createBufferSource();s.buffer=b;const f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=freq;const g=AC.createGain();g.gain.value=vol;
+  s.connect(f);f.connect(g);g.connect(master);s.start();
+}
+const SFX={
+ blip:()=>tone(660,.08,'triangle',.12),
+ page:()=>noiseBurst(.12,.15,3000),
+ clue:()=>{tone(523,.25,'triangle',.15);tone(784,.4,'triangle',.13,0,.12)},
+ unlock:()=>{tone(180,.12,'square',.08);tone(120,.25,'square',.08,0,.1);noiseBurst(.3,.2,800)},
+ fail:()=>tone(160,.3,'sawtooth',.08,-60),
+ door:()=>noiseBurst(.35,.25,500),
+ lever:()=>{tone(90,.3,'square',.07);noiseBurst(.2,.2,1200)},
+ thunder:()=>noiseBurst(2.2,.6,180),
+ win:()=>{[392,494,587,784].forEach((f,i)=>tone(f,.6,'triangle',.12,0,i*.18))},
+ tick:()=>tone(1400,.03,'square',.05)
+};
+function rumble(strong=.6,dur=180){
+  for(const gp of (navigator.getGamepads?navigator.getGamepads():[])){
+    if(gp&&gp.vibrationActuator&&gp.vibrationActuator.playEffect){try{gp.vibrationActuator.playEffect('dual-rumble',{duration:dur,strongMagnitude:strong,weakMagnitude:strong*.6})}catch(e){}}
+  }
+}
+
+/* ---------------------------- INPUT ---------------------------- */
+// Each local device produces {x,y,c:{a,b,y,u,d,l,r,s}} where c are press counters (edge-safe over the network).
+const devs={}; // devId -> {x,y,c}
+function dev(id){return devs[id]||(devs[id]={x:0,y:0,c:{a:0,b:0,y:0,u:0,d:0,l:0,r:0,s:0}})}
+const keys={};
+const KB1={KeyW:'u',KeyS:'d',KeyA:'l',KeyD:'r',KeyE:'a',Space:'a',KeyQ:'b',Tab:'y'};
+const KB2={ArrowUp:'u',ArrowDown:'d',ArrowLeft:'l',ArrowRight:'r',Slash:'a',Period:'b',Comma:'y'};
+let localPlayers=[]; // [{dev,li,name}]
+function kb2Joined(){return localPlayers.some(p=>p.dev==='kb2')}
+addEventListener('keydown',e=>{
+  audioInit();
+  if(document.activeElement&&document.activeElement.tagName==='INPUT'){
+    if(e.code==='Enter'&&document.activeElement.id==='chatin'){sendChat();e.preventDefault()}
+    if(e.code==='Escape'&&document.activeElement.id==='chatin'){closeChat()}
+    return;
+  }
+  if(e.repeat){ if(['Tab','Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)&&uiHidden())e.preventDefault(); return }
+  keys[e.code]=1;
+  let m=KB1[e.code],d='kb1';
+  if(!m&&KB2[e.code]){ if(kb2Joined()){m=KB2[e.code];d='kb2'} else { m=KB2[e.code]==='a'?'a':KB2[e.code]; if(e.code==='Slash'&&!uiHidden()){d='kb2'} } }
+  if(e.code==='Enter'&&!kb2Joined()&&uiHidden()){m='a';d='kb1'}
+  if(e.code==='Backspace'&&uiHidden()){m='b';d='kb1'}
+  if(m){dev(d).c[m]++; if(uiHidden())e.preventDefault()}
+  if(e.code==='Escape'&&uiHidden()&&G&&G.ph==='play')openPause();
+  else if(e.code==='Escape'&&screen==='pause'&&!uiHidden())act('resume');
+  if(e.code==='KeyT'&&uiHidden()&&role!=='local'){openChat();e.preventDefault()}
+  if(e.code==='KeyV'&&net&&net.mode==='peer')toggleMic();
+},{passive:false});
+addEventListener('keyup',e=>{keys[e.code]=0});
+addEventListener('pointerdown',audioInit);
+function sampleKeyboard(){
+  const k1=dev('kb1'),k2=dev('kb2'),solo=!kb2Joined();
+  k1.x=(keys.KeyD||(solo&&keys.ArrowRight)?1:0)-(keys.KeyA||(solo&&keys.ArrowLeft)?1:0);
+  k1.y=(keys.KeyS||(solo&&keys.ArrowDown)?1:0)-(keys.KeyW||(solo&&keys.ArrowUp)?1:0);
+  k2.x=solo?0:(keys.ArrowRight?1:0)-(keys.ArrowLeft?1:0);
+  k2.y=solo?0:(keys.ArrowDown?1:0)-(keys.ArrowUp?1:0);
+}
+const padPrev={};
+let padCount=0;
+function samplePads(){
+  const pads=navigator.getGamepads?navigator.getGamepads():[];let n=0;
+  for(const gp of pads){
+    if(!gp||!gp.connected)continue;n++;
+    const id='gp'+gp.index,d=dev(id),pv=padPrev[id]||(padPrev[id]={});
+    const b=i=>!!(gp.buttons[i]&&gp.buttons[i].pressed);
+    let ax=gp.axes[0]||0,ay=gp.axes[1]||0;
+    if(Math.hypot(ax,ay)<.3){ax=0;ay=0}
+    if(b(14))ax=-1;if(b(15))ax=1;if(b(12))ay=-1;if(b(13))ay=1;
+    d.x=ax;d.y=ay;
+    const st={a:b(0),b:b(1),y:b(3)||b(2),s:b(9),v:b(8),u:ay<-.6,d:ay>.6,l:ax<-.6,r:ax>.6};
+    for(const k in st){ if(st[k]&&!pv[k]){ if(k==='v'){ if(net&&net.mode==='peer')toggleMic() } else d.c[k]++ } pv[k]=st[k] }
+  }
+  padCount=n;
+}
+function localInputs(){ // keyed by player key
+  const out={};for(const p of localPlayers){const d=dev(p.dev);out[cid+':'+p.li]={x:d.x,y:d.y,c:{...d.c}}}return out;
+}
+
+/* ---------------------------- STATE / HOST SIM ---------------------------- */
+let G=null, role='local'; // local | host | client
+const inputs={}, prevC={};
+let fxSeen=0, lastSeenEv=0;
+function newState(){return{ph:'lobby',rm:'foyer',pl:[],fl:{},cl:[],it:[],md:null,ts:[],fx:[],fxn:0,sk:0,tm:0,code:'',vp:[],lt:0}}
+function pushFx(k){G.fxn++;G.fx.push({i:G.fxn,k,t:G.tm});}
+function toast(s){G.ts.push({s,t:G.tm});if(G.ts.length>3)G.ts.shift()}
+function addClue(id){ if(!G.cl.includes(id)){G.cl.push(id);toast('New clue: '+CLUES[id].t);pushFx('clue')} }
+function pkey(p){return p.o+':'+p.li}
+function addPlayer(owner,li,name,devName){
+  if(G.pl.length>=4)return false;
+  const used=G.pl.map(p=>p.c);let c=0;while(used.includes(c))c++;
+  const anchor=G.pl[0];
+  const p={n:(name||'Detective').slice(0,16),c,o:owner,li,dv:devName,x:anchor?anchor.x:14.5,y:anchor?anchor.y:11.5,d:-Math.PI/2};
+  G.pl.push(p);return true;
+}
+function placeParty(sx,sy){
+  const offs=[[0,0],[1,0],[-1,0],[0,-1],[0,1],[1,1],[-1,1],[1,-1]],g=gridFor(G.rm,G.fl);let i=0;
+  for(const p of G.pl){
+    for(;i<offs.length;i++){const tx=sx+offs[i][0],ty=sy+offs[i][1];if(tx>0&&ty>0&&tx<COLS-1&&ty<ROWS-1&&g[ty]&&g[ty][tx]===0){p.x=tx+.5;p.y=ty+.5;i++;break}}
+  }
+}
+function startGame(){
+  G.ph='play';G.rm='foyer';placeParty(14,11);
+  G.md={ty:'text',id:'intro',pg:0,ow:pkey(G.pl[0]),any:1};
+  pushFx('page');
+}
+function visibleSpots(rid){return ROOMS[rid].spots}
+function nearestSpot(p){
+  let best=null,bd=1.45;
+  for(const s of visibleSpots(G.rm)){const d=Math.hypot(p.x-(s.x+.5),p.y-(s.y+.5));if(d<bd){bd=d;best=s}}
+  return best;
+}
+function openText(id,owner){G.md={ty:'text',id,pg:0,ow:owner};pushFx('page')}
+function interact(s,owner){
+  const F=G.fl;F['s_'+s.id]=1;pushFx('blip');
+  switch(s.id){
+   case 'portrait':addClue('motto');return openText('portrait',owner);
+   case 'telegram':return openText('telegram',owner);
+   case 'coat': if(!G.it.includes('ghKey')){G.it.push('ghKey');F.ghKey=1;toast('Got: Conservatory key');pushFx('unlock');return openText('coat',owner)} return openText('coat2',owner);
+   case 'board':G.md={ty:'board',sel:0,ow:owner};return;
+   case 'body':addClue('body');return openText('body',owner);
+   case 'tea':addClue('tea');return openText('tea',owner);
+   case 'clock':addClue('clock');return openText('clock',owner);
+   case 'calendar':addClue('calendar');return openText('calendar',owner);
+   case 'window':return openText('window',owner);
+   case 'safe': if(F.safe)return openText('safeDone',owner); G.md={ty:'code',dg:[0,0,0,0],sel:0,ow:owner};return;
+   case 'books': if(F.booksOpen)return openText('booksDone',owner); G.md={ty:'books',sel:0,seq:[],ow:owner};return;
+   case 'lectern':addClue('poisonbook');return openText('lectern',owner);
+   case 'chair':return openText('chair',owner);
+   case 'piano':return openText('piano',owner);
+   case 'foxglove':case 'mortar':case 'glog':addClue(s.id);return openText(s.id,owner);
+   case 'vivian':case 'crane':case 'pell':case 'voss':
+     if(F.dossiers){addClue(s.id);addClue(s.id+'2');return openText(s.id+'2',owner)}
+     addClue(s.id);return openText(s.id,owner);
+   case 'cabinet':addClue('dossiers');F.dossiers=1;toast('Secret revealed: Harrow was a blackmailer');return openText('cabinet',owner);
+   case 'ledger':addClue('ledger');return openText('ledger',owner);
+   case 'eleanor':addClue('eleanor');return openText('eleanor',owner);
+   case 'cipher': if(F.cipher)return openText('cipherDone',owner); G.md={ty:'cipher',sh:0,ow:owner};return;
+   case 'leverA':case 'leverB':{
+     if(F.gateOpen){toast('The gate is already open.');return}
+     const k=s.id==='leverA'?'lvA':'lvB';F[k]=8;pushFx('lever');
+     if(!F.leverSeen){F.leverSeen=1;toast('The lever springs back slowly. Pull both together!')}
+     return;}
+   case 'bag':addClue('vial');return openText('bag',owner);
+   case 'boatlog':addClue('boatlog');return openText('boatlog',owner);
+   case 'mud':addClue('mud');return openText('mud',owner);
+  }
+}
+function closeModal(){
+  const m=G.md;G.md=null;
+  if(m&&m.ty==='text'){
+    if(m.id==='win'){G.ph='end';G.win=1}
+    if(m.id==='lose'){G.ph='end';G.win=0}
+  }
+}
+function modalInput(e){
+  const m=G.md;
+  if(m.ty==='text'){
+    const pages=TEXT[m.id].p.length;
+    if(e.a){m.pg++;pushFx('page');if(m.pg>=pages)closeModal()}
+    else if(e.b&&m.id!=='win'&&m.id!=='lose')closeModal();
+    return;
+  }
+  if(e.b){closeModal();return}
+  if(m.ty==='code'){
+    if(e.l){m.sel=(m.sel+3)%4;pushFx('tick')} if(e.r){m.sel=(m.sel+1)%4;pushFx('tick')}
+    if(e.u){m.dg[m.sel]=(m.dg[m.sel]+1)%10;pushFx('tick')} if(e.d){m.dg[m.sel]=(m.dg[m.sel]+9)%10;pushFx('tick')}
+    if(e.a){ if(m.dg.join('')==='1147'){G.fl.safe=1;pushFx('unlock');addClue('diary');openText('safeOpen',m.ow)} else {toast('The dial clicks. The safe stays shut.');pushFx('fail')} }
+  } else if(m.ty==='books'){
+    if(e.l){m.sel=(m.sel+5)%6;pushFx('tick')} if(e.r){m.sel=(m.sel+1)%6;pushFx('tick')}
+    if(e.a){
+      m.seq.push(m.sel);pushFx('blip');
+      const i=m.seq.length-1;
+      if(m.seq[i]!==BOOK_ORDER[i]){toast('A dull thunk. The books slide back.');pushFx('fail');m.seq=[]}
+      else if(m.seq.length===4){G.fl.booksOpen=1;pushFx('unlock');rumbleFx();toast('Secret passage revealed!');openText('booksOpen',m.ow)}
+    }
+  } else if(m.ty==='cipher'){
+    if(e.l){m.sh=(m.sh+25)%26;pushFx('tick')} if(e.r){m.sh=(m.sh+1)%26;pushFx('tick')}
+    if(e.a){ if(caesar(CIPHER_ENC,-m.sh)===CIPHER_PLAIN){G.fl.cipher=1;addClue('cipher');openText('cipherDone',m.ow)} else {toast('Still gibberish.');pushFx('fail')} }
+  } else if(m.ty==='board'){
+    if(e.u){m.sel=(m.sel+2)%3;pushFx('tick')} if(e.d){m.sel=(m.sel+1)%3;pushFx('tick')}
+    if(e.a){ if(m.sel===0)G.md={ty:'journal',sc:0,ow:m.ow}; else if(m.sel===1)G.md={ty:'accuse',row:0,sel:[0,0,0],ow:m.ow}; else closeModal(); pushFx('page') }
+  } else if(m.ty==='journal'){
+    if(e.u){m.sc=Math.max(0,m.sc-1)} if(e.d){m.sc=Math.min(Math.max(0,G.cl.length-5),m.sc+1)}
+    if(e.a)closeModal();
+  } else if(m.ty==='accuse'){
+    if(e.u){m.row=(m.row+3)%4;pushFx('tick')} if(e.d){m.row=(m.row+1)%4;pushFx('tick')}
+    if(m.row<3){const n=ACCUSE[m.row].o.length; if(e.l){m.sel[m.row]=(m.sel[m.row]+n-1)%n;pushFx('tick')} if(e.r){m.sel[m.row]=(m.sel[m.row]+1)%n;pushFx('tick')}}
+    if(e.a&&m.row===3){
+      const ok=m.sel.map((v,i)=>v===ANSWER[i]);
+      if(ok.every(Boolean)){pushFx('win');openText('win',m.ow)}
+      else if(ok[0]){pushFx('fail');openText('partial',m.ow)}
+      else{G.sk++;pushFx('fail');openText(G.sk>=3?'lose':'wrong',m.ow)}
+    } else if(e.a&&m.row<3){m.row++;pushFx('tick')}
+  }
+}
+function rumbleFx(){pushFx('rumble')}
+function tryMove(p,dx,dy,g){
+  const r=.3;
+  const free=(x,y)=>{const tx=Math.floor(x),ty=Math.floor(y);return g[ty]&&g[ty][tx]===0};
+  const ok=(x,y)=>free(x-r,y-r)&&free(x+r,y-r)&&free(x-r,y+r)&&free(x+r,y+r);
+  if(ok(p.x+dx,p.y))p.x+=dx; if(ok(p.x,p.y+dy))p.y+=dy;
+}
+let doorCool=0,lockToastT={};
+function hostTick(dt){
+  G.tm+=dt;
+  Object.assign(inputs,localInputs());
+  const edges={};
+  for(const p of G.pl){
+    const k=pkey(p),inp=inputs[k]||{x:0,y:0,c:{}},pv=prevC[k]||(prevC[k]={...inp.c}),e={};
+    for(const b of ['a','b','y','u','d','l','r','s']){const cur=inp.c[b]||0;let q=pv[b]||0;if(cur-q>3)q=cur-1;if(cur<q)q=cur;e[b]=cur>q;pv[b]=e[b]?q+1:q}
+    edges[k]=e;
+  }
+  if(G.ph==='play'){
+    if(G.md){
+      const own=edges[G.md.ow];
+      if(!G.pl.some(p=>pkey(p)===G.md.ow))G.md.ow=G.pl[0]?pkey(G.pl[0]):'';
+      if(own)modalInput(own);
+      // The intro briefing can be advanced by anyone.
+      if(G.md&&G.md.any){for(const k in edges)if(k!==G.md.ow&&edges[k].a){modalInput({a:1});break}}
+    } else {
+      const g=gridFor(G.rm,G.fl);
+      for(const p of G.pl){
+        const k=pkey(p),inp=inputs[k]||{x:0,y:0},e=edges[k];
+        let mx=inp.x,my=inp.y;const mag=Math.hypot(mx,my);
+        if(mag>1){mx/=mag;my/=mag}
+        if(mag>.1){p.d=Math.atan2(my,mx);const sp=4.2*dt;const ox=p.x,oy=p.y;tryMove(p,mx*sp,my*sp,g);p.mv=1;
+          // doors
+          const tx=Math.floor(p.x),ty=Math.floor(p.y);
+          const door=ROOMS[G.rm].doors.find(d=>d.x===tx&&d.y===ty&&(!d.req||G.fl[d.req]));
+          if(door){
+            if(door.lock&&!G.fl[door.lock]){p.x=ox;p.y=oy;
+              if(!(lockToastT[door.to]>G.tm)){lockToastT[door.to]=G.tm+2.5;pushFx('fail');
+                toast(door.gate?'An iron gate. It is chained to two levers that must be pulled together.':'Locked. There must be a key somewhere in the house.')}}
+            else if(doorCool<=0){
+              G.rm=door.to;placeParty(door.sx,door.sy);doorCool=.6;pushFx('door');
+              if(ROOMS[door.to].secret&&!G.fl['v_'+door.to]){G.fl['v_'+door.to]=1;toast('Secret location found: '+ROOMS[door.to].name)}
+              break;
+            }
+          }
+        } else p.mv=0;
+        if(e.a){const s=nearestSpot(p);if(s){interact(s,k);break}}
+        if(e.y){G.md={ty:'journal',sc:0,ow:k};pushFx('page');break}
+      }
+    }
+    doorCool-=dt;
+    // levers
+    const F=G.fl;
+    for(const k of ['lvA','lvB']){ if(F[k]>0){F[k]=Math.max(0,F[k]-dt)} }
+    if(!F.gateOpen&&F.lvA>0&&F.lvB>0){F.gateOpen=1;F.lvA=0;F.lvB=0;pushFx('unlock');rumbleFx();toast('The iron gate grinds open!')}
+  } else if(G.ph==='end'){
+    for(const k in edges)if(edges[k].a&&G.tm>(G.endT||0)){endToTitle();return}
+  }
+  if(G.ph==='end'&&!G.endT)G.endT=G.tm+1.5;
+  G.ts=G.ts.filter(t=>G.tm-t.t<4.5);
+  G.fx=G.fx.filter(f=>G.tm-f.t<1.5);
+}
+
+/* ---------------------------- NETWORKING ---------------------------- */
+// net: {mode:'room'|'peer', toAll(t,d), toHost(t,d), close()}
+let net=null, roomApi=null, roomChecked=false;
+const remoteLast={}; // cid -> time
+let gotState=false, hiAcked=false, lastStateAt=0, lastSentInp='', lastInpAt=0;
+function onlineMode(){
+  if(window.claude&&typeof window.claude.use==='function')return roomApi?'room':(roomChecked?'none':'pending');
+  return window.Peer?'peer':'none';
+}
+function checkRoom(){
+  if(!(window.claude&&typeof window.claude.use==='function')){roomChecked=true;return}
+  const done=()=>{roomChecked=true;if(['title','howto'].includes(screen)&&!ui.hidden)refreshUI()};
+  window.claude.use('room').then(r=>{roomApi=r;done()}).catch(done);
+}
+async function connect(code,asHost){
+  const mode=onlineMode();
+  if(mode==='room'){
+    const rm=await roomApi.join('harrow-'+code);
+    const handlers={};
+    const on=(t)=>rm.on(t,msg=>{if(msg.sameTab)return;handlers[t]&&handlers[t](msg.data)});
+    ['hi','inp','st','chat','bye'].forEach(on);
+    net={mode:'room',handlers,toAll:(t,d)=>rm.emit(t,d).catch(()=>{}),toHost:(t,d)=>rm.emit(t,d).catch(()=>{}),close:()=>rm.leave().catch(()=>{})};
+    return net;
+  }
+  if(mode==='peer'){
+    return await new Promise((res,rej)=>{
+      const handlers={};const conns=new Map();
+      const peer=asHost?new Peer('harrowhouse-'+code):new Peer();
+      let done=false;const fail=m=>{if(!done){done=true;rej(new Error(m))}};
+      setTimeout(()=>fail('Timed out reaching the matchmaking server.'),12000);
+      peer.on('error',err=>{ if(err&&err.type==='unavailable-id')fail('That room code is already in use. Try hosting again.'); else if(err&&err.type==='peer-unavailable')fail('No game found with that code.'); else fail('Connection error: '+(err&&err.type||'unknown')) });
+      peer.on('call',call=>{call.answer(micStream||undefined);attachCall(call)});
+      peer.on('open',id=>{
+        if(asHost){
+          peer.on('connection',c=>{c.on('data',m=>{if(m&&m.t){conns.set(m.d&&m.d.cid||c.peer,c);handlers[m.t]&&handlers[m.t](m.d,c)}});c.on('close',()=>{for(const [k,v] of conns)if(v===c)conns.delete(k)})});
+          net={mode:'peer',peer,handlers,toAll:(t,d)=>{for(const c of new Set(conns.values()))if(c.open)c.send({t,d})},toHost:()=>{},close:()=>{try{peer.destroy()}catch(e){}}};
+          done=true;res(net);
+        } else {
+          const c=peer.connect('harrowhouse-'+code,{reliable:true});
+          c.on('open',()=>{net={mode:'peer',peer,handlers,toAll:(t,d)=>c.send({t,d}),toHost:(t,d)=>c.send({t,d}),close:()=>{try{peer.destroy()}catch(e){}}};done=true;res(net)});
+          c.on('data',m=>{if(m&&m.t)handlers[m.t]&&handlers[m.t](m.d)});
+          c.on('close',()=>{if(role==='client')connectionLost('The host closed the game.')});
+        }
+      });
+    });
+  }
+  throw new Error('Online play is not available here.');
+}
+function setupHostHandlers(){
+  const h=net.handlers;
+  h.hi=d=>{
+    if(!d||typeof d.cid!=='string')return;remoteLast[d.cid]=performance.now();
+    const locals=Array.isArray(d.locals)?d.locals.slice(0,4):[];
+    for(const l of locals){
+      if(typeof l.li!=='number')continue;
+      if(!G.pl.some(p=>p.o===d.cid&&p.li===l.li)){ if(addPlayer(d.cid,l.li,String(l.name||'Detective'),String(l.dev||'remote'))){toast((l.name||'A detective')+' joined');if(G.ph==='play')placeNew()} }
+    }
+    if(d.pid&&net.mode==='peer'){}
+  };
+  h.inp=d=>{
+    if(!d||typeof d.cid!=='string'||!d.l)return;remoteLast[d.cid]=performance.now();
+    for(const k in d.l){const v=d.l[k];if(v&&typeof v==='object')inputs[d.cid+':'+k]={x:+v.x||0,y:+v.y||0,c:v.c||{}}}
+  };
+  h.chat=d=>{if(d&&d.m){showChat(String(d.n||'?'),String(d.m));if(net.mode==='peer')net.toAll('chat',d)}};
+  h.bye=d=>{if(d&&d.cid)dropClient(d.cid)};
+  h.voice=d=>{if(d&&d.pid&&!G.vp.includes(d.pid))G.vp.push(String(d.pid))};
+}
+function placeNew(){const a=G.pl[0];for(const p of G.pl){if(p.x===undefined){p.x=a.x;p.y=a.y}}}
+function dropClient(c){
+  const before=G.pl.length;G.pl=G.pl.filter(p=>p.o!==c);delete remoteLast[c];
+  if(G.pl.length<before)toast('A detective left the investigation');
+}
+function setupClientHandlers(){
+  const h=net.handlers;
+  h.st=d=>{
+    if(!d||typeof d!=='object'||!Array.isArray(d.pl))return;
+    lastStateAt=performance.now();
+    const prevPh=G&&G.ph;G=d;
+    if(G.pl.filter(p=>p.o===cid).length>=localPlayers.length&&localPlayers.length)hiAcked=true;gotState=true;
+    if(G.ph==='over'){connectionLost('The host ended the game.');return}
+    if(prevPh!==G.ph||!prevPh)refreshUI();
+    else if(G.ph==='lobby')renderLobbyRoster();
+    syncVoice();
+  };
+  h.chat=d=>{if(d&&d.m&&d.cid!==cid)showChat(String(d.n||'?'),String(d.m))};
+  ['hi','inp','bye','voice'].forEach(t=>h[t]=()=>{});
+}
+let stAcc=0;
+function netTick(dt){
+  if(!net)return;
+  if(role==='host'){
+    stAcc+=dt;
+    if(stAcc>=1/12){stAcc=0;G.code=roomCode;net.toAll('st',G)}
+    const now=performance.now();
+    for(const c in remoteLast)if(now-remoteLast[c]>7000)dropClient(c);
+  } else if(role==='client'){
+    const now=performance.now();
+    if(!hiAcked&&now-(net.lastHi||0)>1000){net.lastHi=now;sendHi()}
+    const l={};for(const p of localPlayers){const d=dev(p.dev);l[p.li]={x:+d.x.toFixed(2),y:+d.y.toFixed(2),c:d.c}}
+    const s=JSON.stringify(l);
+    if((s!==lastSentInp&&now-lastInpAt>66)||now-lastInpAt>500){lastSentInp=s;lastInpAt=now;net.toHost('inp',{cid,l})}
+    if(lastStateAt&&now-lastStateAt>8000)connectionLost(gotState?'Lost contact with the host.':'No host answered with that room code.');
+  }
+}
+function sendHi(){if(net&&role==='client')net.toHost('hi',{cid,locals:localPlayers.map(p=>({li:p.li,name:p.name,dev:p.dev}))})}
+let roomCode='';
+function genCode(){return String(Math.floor(1000+Math.random()*9000))}
+function connectionLost(msg){
+  if(role!=='client')return;
+  leaveNet();G=null;role='local';showScreen('title',msg);
+}
+function leaveNet(){
+  if(net){try{if(role==='client')net.toHost('bye',{cid});if(role==='host'){G.ph='over';net.toAll('st',G)}}catch(e){} setTimeout(((n)=>()=>n.close())(net),200)}
+  net=null;stopVoice();
+}
+
+/* ---------------------------- VOICE (standalone / peer mode) ---------------------------- */
+let micStream=null, micOn=false; const calls={};
+async function enableVoice(){
+  if(!net||net.mode!=='peer')return;
+  try{micStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}})}
+  catch(e){showChat('System','Microphone blocked. Allow mic access in your browser to talk.');return}
+  micOn=true;updateMic();
+  const pid=net.peer.id;
+  if(role==='host'){if(!G.vp.includes(pid))G.vp.push(pid)} else net.toHost('voice',{cid,pid});
+  $('#voicebar').hidden=false;syncVoice();
+}
+function syncVoice(){
+  if(!net||net.mode!=='peer'||!micStream||!G||!G.vp)return;
+  const me=net.peer.id;
+  for(const other of G.vp){ if(other!==me&&!calls[other]&&me<other){const c=net.peer.call(other,micStream);if(c)attachCall(c)} }
+}
+function attachCall(call){
+  calls[call.peer]=call;
+  call.on('stream',s=>{let a=document.getElementById('au-'+call.peer);if(!a){a=document.createElement('audio');a.id='au-'+call.peer;a.autoplay=true;document.body.appendChild(a)}a.srcObject=s;a.play().catch(()=>{})});
+  call.on('close',()=>{delete calls[call.peer];const a=document.getElementById('au-'+call.peer);if(a)a.remove()});
+}
+function toggleMic(){
+  if(!micStream){enableVoice();return}
+  micOn=!micOn;micStream.getAudioTracks().forEach(t=>t.enabled=micOn);updateMic();
+}
+function updateMic(){const b=$('#micbtn');b.classList.toggle('on',micOn);b.innerHTML=(micOn?'Mic on':'Mic muted')+' <span class="k">V / View</span>'}
+function stopVoice(){for(const k in calls){try{calls[k].close()}catch(e){}delete calls[k]}if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null}micOn=false;$('#voicebar').hidden=true}
+$('#micbtn').addEventListener('click',toggleMic);
+
+/* ---------------------------- CHAT ---------------------------- */
+function myName(){return (localPlayers[0]&&localPlayers[0].name)||savedName()||'Detective'}
+function openChat(){const i=$('#chatin');i.hidden=false;i.focus()}
+function closeChat(){const i=$('#chatin');i.value='';i.hidden=true;i.blur()}
+function sendChat(){
+  const i=$('#chatin'),m=i.value.trim().slice(0,140);closeChat();if(!m||!net)return;
+  const d={cid,n:myName(),m};showChat(d.n,m);
+  if(role==='host')net.toAll('chat',d);else net.toHost('chat',d);
+}
+function showChat(n,m){
+  const log=$('#chatlog'),el=document.createElement('div');el.textContent=n+': '+m;log.appendChild(el);
+  while(log.children.length>6)log.firstChild.remove();
+  setTimeout(()=>{el.style.opacity=0;setTimeout(()=>el.remove(),700)},10000);
+}
+
+/* ---------------------------- DOM SCREENS ---------------------------- */
+const ui=$('#ui');let screen='title';
+function uiHidden(){return ui.hidden}
+function savedName(){try{return localStorage.getItem('hh-name')||''}catch(e){return ''}}
+function saveName(n){try{localStorage.setItem('hh-name',n)}catch(e){}}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function onlineNote(){
+  const m=onlineMode();
+  if(m==='room')return '<div class="note">Online play runs through Claude: everyone you share this page with can join using your room code. Text chat with <b>T</b>. Voice chat isn\'t available inside Claude, so use the standalone file for voice or a call app alongside.</div>';
+  if(m==='peer')return '<div class="note">Online play connects directly between browsers. Voice chat is built in: press <b>Enable voice</b> in the lobby, then <b>V</b> or the controller\'s View button to mute.</div>';
+  if(m==='pending')return '<div class="note">Checking online play…</div>';
+  return '<div class="note">Online play needs either this page opened inside Claude or the standalone file opened in a browser with internet access.</div>';
+}
+function showScreen(s,msg){screen=s;ui.hidden=false;refreshUI(msg)}
+function refreshUI(msg){
+  if(G&&(G.ph==='play'||G.ph==='end')&&screen!=='pause'){ui.hidden=true;$('#voicebar').hidden=!(micStream);return}
+  if(G&&G.ph==='lobby'&&(role==='client'||role==='host'||role==='local'))screen='lobby';
+  ui.hidden=false;
+  const m=onlineMode(),online=m==='room'||m==='peer';
+  let h='';
+  if(screen==='title'){
+    h=`<div class="card"><div class="eyebrow">Blackmoor Constabulary · Case No. 1147</div><h1>Harrow House</h1>
+    <p>A clockmaker is dead in a locked study, and the police have no answers. Gather up to four detectives, search the house, solve its puzzles, find its secret rooms, and name the killer.</p>
+    ${msg?`<div class="note">${esc(msg)}</div>`:''}
+    <div class="stack">
+      <button data-nav data-act="local">Play on this device <span class="k">1–4 players</span></button>
+      <button data-nav data-act="host" ${online?'':'disabled'}>Host an online game <span class="k">get a room code</span></button>
+      <button data-nav data-act="join" ${online?'':'disabled'}>Join an online game <span class="k">enter a code</span></button>
+      <button data-nav data-act="howto" class="ghost">How to play</button>
+    </div>
+    <p class="muted" style="margin-top:14px">${padCount?padCount+' controller'+(padCount>1?'s':'')+' connected.':'No controller detected. Press any button on an Xbox controller to wake it.'}</p></div>`;
+  } else if(screen==='howto'){
+    h=`<div class="card"><div class="eyebrow">Field manual</div><h2>How to play</h2>
+    <div class="keys">
+      <span><b>Move</b></span><span>Left stick or D-pad · WASD · arrows</span>
+      <span><b>Examine / confirm</b></span><span>A · E or Space (or Enter)</span>
+      <span><b>Back / close</b></span><span>B · Q</span>
+      <span><b>Case journal</b></span><span>Y · Tab</span>
+      <span><b>Pause</b></span><span>Menu button · Esc</span>
+      <span><b>Chat (online)</b></span><span>T</span>
+      <span><b>Second keyboard player</b></span><span>Arrows, / examine, . back, , journal</span>
+    </div>
+    <p>Glinting objects can be examined. Puzzles use the D-pad or arrow keys. Whoever opens a puzzle controls it, and everyone sees it, so talk it through.</p>
+    <p>Some doors stay locked until you find a key or solve a puzzle. Some mechanisms need two detectives at once, though one quick detective can manage alone.</p>
+    <p>When you think you know who did it, why, and how, go to the case board in the foyer. Three wrong accusations and the case goes cold.</p>
+    ${onlineNote()}
+    <div class="stack"><button data-nav data-act="back" data-back>Back</button></div></div>`;
+  } else if(screen==='host'||screen==='join'){
+    const isHost=screen==='host';
+    h=`<div class="card"><div class="eyebrow">${isHost?'Host':'Join'} an online game</div><h2>${isHost?'Open the case file':'Join your partners'}</h2>
+    ${onlineNote()}
+    ${msg?`<div class="note" style="border-color:var(--blood)">${esc(msg)}</div>`:''}
+    <div class="row" style="margin-top:10px"><div class="field"><label for="f-name">Your name</label><input id="f-name" data-nav maxlength="16" value="${esc(savedName()||'Detective')}"></div>
+    ${isHost?'':`<div class="field" style="max-width:160px"><label for="f-code">Room code</label><input id="f-code" data-nav inputmode="numeric" maxlength="4" placeholder="1234"></div>`}</div>
+    <div class="stack"><button data-nav data-act="${isHost?'dohost':'dojoin'}">${isHost?'Create room':'Join room'}</button><button data-nav data-act="back" data-back class="ghost">Back</button></div></div>`;
+  } else if(screen==='connecting'){
+    h=`<div class="card"><div class="eyebrow">Telegraph office</div><h2>Connecting…</h2><p>${esc(msg||'Reaching the other detectives.')}</p><div class="stack"><button data-nav data-act="cancel" data-back class="ghost">Cancel</button></div></div>`;
+  } else if(screen==='lobby'){
+    const isClient=role==='client';
+    h=`<div class="card"><div class="eyebrow">${role==='local'?'Local co-op':'Online lobby'}</div><h2>Assemble your detectives</h2>
+    ${role!=='local'?`<label>Room code</label><div class="code">${esc(roomCode)}</div>`:''}
+    <p>Each player presses <b>A</b> on their controller, <b>E</b> on the keyboard, or <b>/</b> for a second keyboard player. Up to four in total${role!=='local'?' across all machines':''}.</p>
+    <ul class="roster" id="roster"></ul>
+    ${net&&net.mode==='peer'?`<button data-nav data-act="voice" class="ghost" style="margin-bottom:10px">${micStream?'Voice chat on':'Enable voice chat'} <span class="k">mic</span></button>`:''}
+    <div class="stack">
+      ${isClient?'<p class="muted">Waiting for the host to begin.</p>':`<button data-nav data-act="start" id="startbtn">Begin the investigation <span class="k">Menu / Enter</span></button>`}
+      <button data-nav data-act="leave" data-back class="ghost">Leave</button>
+    </div></div>`;
+  } else if(screen==='pause'){
+    h=`<div class="card"><div class="eyebrow">Paused</div><h2>A moment to think</h2>
+    <p>${G?G.cl.length+' of '+CLUE_TOTAL+' clues found · '+G.sk+' of 3 accusations used.':''}</p>
+    ${role!=='local'?'<p class="muted">Online games keep running while this menu is open.</p>':''}
+    <div class="stack"><button data-nav data-act="resume" data-back>Resume</button><button data-nav data-act="quit" class="ghost">Quit to title</button></div></div>`;
+  }
+  ui.innerHTML=h;
+  if(screen==='lobby')renderLobbyRoster();
+  navIndex=-1;
+}
+function renderLobbyRoster(){
+  const r=$('#roster');if(!r||!G)return;
+  let h='';
+  for(let i=0;i<4;i++){const p=G.pl.find(p=>p.c===i);
+    h+=p?`<li><span class="dot" style="background:${COLORS[p.c]}"></span>${esc(p.n)}<span class="dev">${p.o===cid?'you · ':''}${esc(devLabel(p.dv))}</span></li>`:`<li class="empty"><span class="dot" style="background:transparent;box-shadow:inset 0 0 0 2px #b9ad93"></span>Open seat</li>`}
+  r.innerHTML=h;const sb=$('#startbtn');if(sb)sb.disabled=!G.pl.length;
+}
+function devLabel(d){if(!d)return '';if(d==='kb1')return 'keyboard';if(d==='kb2')return 'keyboard 2';if(d.startsWith('gp'))return 'controller '+(+d.slice(2)+1);return d}
+ui.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b&&!b.disabled)act(b.dataset.act)});
+ui.addEventListener('keydown',e=>{if(e.code==='Enter'&&e.target.tagName==='INPUT'){const b=ui.querySelector('[data-act^="do"]');if(b)act(b.dataset.act)}});
+async function act(a){
+  audioInit();SFX.blip();
+  if(a==='local'){role='local';G=newState();localPlayers=[];showScreen('lobby')}
+  else if(a==='host'||a==='join'||a==='howto'){showScreen(a)}
+  else if(a==='back'){showScreen('title')}
+  else if(a==='dohost'||a==='dojoin'){
+    const name=($('#f-name').value||'Detective').trim().slice(0,16);saveName(name);
+    const code=a==='dohost'?genCode():($('#f-code').value||'').replace(/\D/g,'').slice(0,4);
+    if(a==='dojoin'&&code.length!==4){showScreen('join','Enter the 4-digit room code from your host.');return}
+    showScreen('connecting');
+    try{
+      await connect(code,a==='dohost');roomCode=code;localPlayers=[];
+      if(a==='dohost'){role='host';G=newState();G.code=code;setupHostHandlers()}
+      else{role='client';G=null;hiAcked=false;gotState=false;lastStateAt=performance.now()+4000;setupClientHandlers();G=newState();G.code=code}
+      showScreen('lobby');
+    }catch(err){showScreen(a==='dohost'?'host':'join',err.message||String(err))}
+  }
+  else if(a==='cancel'){leaveNet();showScreen('title')}
+  else if(a==='leave'){leaveNet();G=null;role='local';localPlayers=[];showScreen('title')}
+  else if(a==='start'){if(G&&G.pl.length&&role!=='client'){startGame();screen='play';refreshUI()}}
+  else if(a==='voice'){enableVoice().then(refreshUI)}
+  else if(a==='resume'){screen='play';ui.hidden=true;if(G)refreshUI()}
+  else if(a==='quit'){quitToTitle()}
+}
+function openPause(){screen='pause';ui.hidden=false;refreshUI()}
+function quitToTitle(){leaveNet();G=null;role='local';localPlayers=[];showScreen('title')}
+function endToTitle(){
+  if(role==='host'){leaveNet()}
+  G=null;role='local';localPlayers=[];showScreen('title','Case closed. Thanks for playing.');
+}
+// Joining devices while in the lobby
+function lobbyJoins(){
+  if(!G||(G.ph!=='lobby'&&G.ph!=='play'))return;if(G.ph==='lobby'&&screen!=='lobby')return;if(G.ph==='play'&&!ui.hidden)return;
+  for(const id in devs){
+    const d=devs[id],seen=d._seenA||0;
+    if(d.c.a>seen){ d._seenA=d.c.a;
+      if(!localPlayers.some(p=>p.dev===id)){
+        const total=G.pl.length;if(total>=4)continue;
+        const li=localPlayers.length?Math.max(...localPlayers.map(p=>p.li))+1:0;
+        const base=myNameBase(),name=role==='local'?base:(localPlayers.length?base+' '+(localPlayers.length+1):base);
+        localPlayers.push({dev:id,li,name});
+        if(role==='client'){hiAcked=false;sendHi()} else {addPlayer(cid,li,name,id);if(G.ph==='play')toast(name+' joined the investigation')}
+        SFX.clue();rumble(.4,120);renderLobbyRoster();
+      }
+    }
+    if(G.ph==='lobby'&&d.c.s>(d._seenS||0)){d._seenS=d.c.s;if(localPlayers.some(p=>p.dev===id))act('start')}
+  }
+}
+function myNameBase(){ if(role==='local'){return 'Detective '+(G.pl.length+1)} return savedName()||'Detective' }
+// Keep the A counters in sync outside the lobby so stale presses don't join later
+function syncSeen(){for(const id in devs){devs[id]._seenA=devs[id].c.a;devs[id]._seenS=devs[id].c.s}}
+
+// Gamepad navigation for DOM menus
+let navIndex=-1;const navPrev={};
+function uiPadNav(){
+  if(ui.hidden)return;
+  const els=[...ui.querySelectorAll('[data-nav]')].filter(e=>!e.disabled);
+  if(!els.length)return;
+  const pads=navigator.getGamepads?navigator.getGamepads():[];
+  for(const gp of pads){
+    if(!gp)continue;const id='gp'+gp.index,pv=navPrev[id]||(navPrev[id]={});
+    const b=i=>!!(gp.buttons[i]&&gp.buttons[i].pressed),ay=gp.axes[1]||0;
+    const st={up:b(12)||ay<-.6,dn:b(13)||ay>.6,a:b(0),b:b(1),s:b(9)};
+    const edge=k=>st[k]&&!pv[k];
+    const joined=localPlayers.some(p=>p.dev===id);
+    if(edge('up')||edge('dn')){navIndex=(navIndex<0?0:navIndex+(edge('dn')?1:-1)+els.length)%els.length;els.forEach(e=>e.classList.remove('focus'));els[navIndex].classList.add('focus');els[navIndex].focus({preventScroll:false});SFX.tick()}
+    if(edge('a')&&(screen!=='lobby'||joined)){const el=els[navIndex]||els[0];if(el.tagName==='INPUT')el.focus();else el.click()}
+    if(edge('b')){const bk=ui.querySelector('[data-back]');if(bk)bk.click()}
+    Object.assign(pv,st);
+  }
+}
+function padPauseCheck(){
+  if(!G||G.ph!=='play')return;
+  let pressed=false;
+  for(const p of localPlayers){const d=dev(p.dev);if(d.c.s>(d._seenS||0))pressed=true;d._seenS=d.c.s}
+  if(!pressed)return;
+  if(screen==='pause')act('resume');else if(ui.hidden)openPause();
+}
+let rosterSig='';
+function rosterWatch(){if(screen!=='lobby'||!G)return;const s=G.pl.map(p=>p.n+p.c).join('|');if(s!==rosterSig){rosterSig=s;renderLobbyRoster()}}
+addEventListener('keydown',e=>{ if(e.code==='Enter'&&screen==='lobby'&&!ui.hidden&&document.activeElement.tagName!=='INPUT'&&role!=='client'){e.preventDefault();act('start')} });
+addEventListener('gamepadconnected',()=>{if(screen==='title'&&!ui.hidden)refreshUI();rumble(.3,100)});
+
+/* ---------------------------- RENDERING ---------------------------- */
+const bgCache={};
+const FLOORS={wood:['#4a3324','#553b29','#3f2b1e'],wood2:['#3a291d','#43301f','#33241a'],carpet:['#4d2026','#552429','#461c22'],carpet2:['#22382f','#273f35','#1e3129'],
+  tile:['#5c665a','#68725f','#545e52'],stone:['#35363b','#3c3d43','#2f3035'],planks:['#5a4630','#634e36','#503e2a']};
+function drawFloor(c,R){
+  const pal=FLOORS[R.floor];
+  for(let y=1;y<ROWS-1;y++)for(let x=1;x<COLS-1;x++){
+    const h=hash(x,y),px=x*TS,py=y*TS+HUD;
+    c.fillStyle=pal[Math.floor(h*3)];c.fillRect(px,py,TS,TS);
+    if(R.floor==='wood'||R.floor==='wood2'){c.fillStyle='rgba(0,0,0,.25)';c.fillRect(px,py+15,TS,1);c.fillRect(px,py+31,TS,1);c.fillRect(px+Math.floor(h*28),py,1,16);c.fillRect(px+Math.floor(hash(y,x)*28),py+16,1,16)}
+    else if(R.floor==='planks'){c.fillStyle='rgba(0,0,0,.3)';c.fillRect(px+10,py,1,TS);c.fillRect(px+21,py,1,TS);c.fillRect(px,py,TS,1)}
+    else if(R.floor==='tile'){if((x+y)%2){c.fillStyle='rgba(255,255,255,.05)';c.fillRect(px,py,TS,TS)}c.strokeStyle='rgba(0,0,0,.25)';c.strokeRect(px+.5,py+.5,TS-1,TS-1)}
+    else if(R.floor==='stone'){c.strokeStyle='rgba(0,0,0,.35)';c.strokeRect(px+.5,py+.5,TS-1,TS-1);if(h>.8){c.fillStyle='rgba(255,255,255,.04)';c.fillRect(px+4,py+6,8,5)}}
+    else {c.fillStyle='rgba(0,0,0,.15)';if((x*7+y*3)%5===0)c.fillRect(px+14,py+14,4,4);c.fillStyle='rgba(201,162,74,.08)';if((x+y)%4===0)c.fillRect(px+15,py+2,2,2)}
+  }
+}
+function drawWalls(c,R,fl){
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+    if(!(x===0||y===0||x===COLS-1||y===ROWS-1))continue;
+    const px=x*TS,py=y*TS+HUD;
+    const door=R.doors.find(d=>d.x===x&&d.y===y&&(!d.req||fl[d.req]));
+    if(R.glass){c.fillStyle='#24302c';c.fillRect(px,py,TS,TS);c.fillStyle='rgba(140,180,190,.22)';c.fillRect(px+3,py+3,TS-6,TS-6);c.strokeStyle='#3c4a44';c.strokeRect(px+.5,py+.5,TS-1,TS-1)}
+    else{c.fillStyle=R.floor==='stone'?'#1c1c21':'#1a1820';c.fillRect(px,py,TS,TS);c.fillStyle=R.floor==='stone'?'#28282e':'#2a2632';
+      if(y===0)c.fillRect(px,py+TS-8,TS,8);c.fillStyle='rgba(201,162,74,.18)';if(y===0)c.fillRect(px,py+TS-9,TS,1)}
+    if(door){
+      c.fillStyle='#0a0a0d';c.fillRect(px+2,py+2,TS-4,TS-4);
+      if(door.lock&&!fl[door.lock]){
+        if(door.gate){c.strokeStyle='#7a7a82';c.lineWidth=3;for(let i=6;i<TS;i+=7){c.beginPath();c.moveTo(px+i,py+2);c.lineTo(px+i,py+TS-2);c.stroke()}c.lineWidth=1}
+        else{c.fillStyle='#5a3a22';c.fillRect(px+3,py+3,TS-6,TS-6);c.fillStyle='#c9a24a';c.fillRect(px+TS-11,py+14,3,4)}
+      } else {c.fillStyle='rgba(201,162,74,.25)';c.fillRect(px+2,py+2,TS-4,2);c.fillRect(px+2,py+2,2,TS-4);c.fillRect(px+TS-4,py+2,2,TS-4)}
+    }
+  }
+  for(const [wx,wy] of R.windows){const px=wx*TS,py=wy*TS+HUD;c.fillStyle='#2b3b52';c.fillRect(px+5,py+5,TS-10,TS-10);c.fillStyle='#43587a';c.fillRect(px+5,py+5,TS-10,2);c.strokeStyle='#5c4a2a';c.lineWidth=2;c.strokeRect(px+5,py+5,TS-10,TS-10);c.beginPath();c.moveTo(px+16,py+5);c.lineTo(px+16,py+TS-5);c.moveTo(px+5,py+16);c.lineTo(px+TS-5,py+16);c.stroke();c.lineWidth=1}
+}
+function box(c,x,y,w,h,fill,edge,top){c.fillStyle=edge;c.fillRect(x,y,w,h);c.fillStyle=fill;c.fillRect(x+2,y+2,w-4,h-5);if(top){c.fillStyle=top;c.fillRect(x+2,y+2,w-4,3)}}
+function drawFurn(c,f,fl){
+  const [x,y,w,h,k,,until]=f;if(until&&fl[until])return;
+  const px=x*TS,py=y*TS+HUD,pw=w*TS,ph=h*TS;
+  switch(k){
+   case 'table':case 'desk':case 'smalltable':box(c,px+2,py+4,pw-4,ph-6,'#6b4a2f','#2a1b10','#86603e');if(k==='desk'){c.fillStyle='#e8dcc0';c.fillRect(px+pw*.55,py+10,22,14);c.fillStyle='#2b4a3a';c.fillRect(px+10,py+10,30,20)}break;
+   case 'rug':c.fillStyle='#5b1e22';c.fillRect(px,py,pw,ph);c.strokeStyle='#b08a3a';c.lineWidth=3;c.strokeRect(px+6,py+6,pw-12,ph-12);c.lineWidth=1;c.strokeStyle='rgba(176,138,58,.5)';c.strokeRect(px+14,py+14,pw-28,ph-28);
+     c.save();c.translate(px+pw/2,py+ph/2);c.rotate(Math.PI/4);c.strokeRect(-30,-30,60,60);c.restore();break;
+   case 'pillar':c.fillStyle='#000';c.globalAlpha=.3;c.beginPath();c.ellipse(px+18,py+28,14,6,0,0,7);c.fill();c.globalAlpha=1;c.fillStyle='#8e8a80';c.beginPath();c.arc(px+16,py+16,13,0,7);c.fill();c.fillStyle='#a8a498';c.beginPath();c.arc(px+13,py+13,7,0,7);c.fill();break;
+   case 'plant':for(let j=0;j<h;j++){const yy=py+j*TS;c.fillStyle='#6a3e24';c.fillRect(px+9,yy+18,14,12);c.fillStyle='#2f5a2c';for(let i=0;i<5;i++){c.beginPath();c.arc(px+16+Math.cos(i*1.3)*7,yy+12+Math.sin(i*1.3)*6,6,0,7);c.fill()}}break;
+   case 'board':box(c,px,py+2,pw,ph-4,'#7a5a3a','#2a1b10');c.fillStyle='#e8dcc0';[[8,6],[30,10],[54,5],[76,9]].forEach(([a,b])=>c.fillRect(px+a,py+b,14,13));c.strokeStyle='#b02a2a';c.beginPath();c.moveTo(px+15,py+12);c.lineTo(px+37,py+16);c.lineTo(px+61,py+11);c.lineTo(px+83,py+15);c.stroke();break;
+   case 'rack':c.fillStyle='#3a2516';c.fillRect(px+14,py+4,4,26);c.fillStyle='#2a3140';c.beginPath();c.ellipse(px+16,py+12,10,8,0,0,7);c.fill();break;
+   case 'fire':box(c,px,py,pw,ph,'#3d3a38','#1b1a19');c.fillStyle='#120c08';c.fillRect(px+pw/2-22,py+8,44,ph-8);break;
+   case 'safe':box(c,px+3,py+2,TS-6,TS-4,'#3c4048','#14161a','#575c66');c.fillStyle='#c9a24a';c.beginPath();c.arc(px+16,py+15,5,0,7);c.fill();break;
+   case 'chair':case 'chairs':for(let i=0;i<w;i++){box(c,px+i*TS+6,py+6,20,20,'#5a2a2a','#261010','#6e3636')}break;
+   case 'shelf':case 'pshelf':case 'shelfv':{
+     box(c,px,py,pw,ph,'#3a2616','#1a1008');
+     const cols=['#7a2a22','#2a4a7a','#3a6a32','#a88a3a','#5a3a6a','#6a5a4a','#2a2a2a'];
+     for(let j=0;j<h;j++)for(let i=0;i<w*5;i++){const hh=hash(x*5+i,y+j);if(k==='shelfv'){c.fillStyle=cols[Math.floor(hh*7)];c.fillRect(px+4,py+j*TS+4+(i%5)*5,TS-10-hh*6,4)}else{c.fillStyle=cols[Math.floor(hh*7)];c.fillRect(px+3+i*6.2,py+j*TS+6+hh*6,5,TS-12-hh*6)}}
+     if(k==='pshelf'){c.fillStyle='#c9a24a';c.fillRect(px+pw/2-18,py+ph-7,36,5)}break;}
+   case 'lectern':box(c,px+5,py+5,22,22,'#5a3c24','#22150a','#76502f');c.fillStyle='#e8dcc0';c.fillRect(px+8,py+9,16,10);c.fillStyle='#8a7a5a';c.fillRect(px+15,py+9,2,10);break;
+   case 'sofa':box(c,px,py+2,pw,ph-4,'#2f4f5a','#10202a','#3d6573');c.fillStyle='rgba(0,0,0,.2)';for(let i=1;i<w;i++)c.fillRect(px+i*TS,py+6,1,ph-12);break;
+   case 'piano':box(c,px,py,pw,ph,'#141414','#000','#2a2a2a');for(let i=0;i<pw-8;i+=6){c.fillStyle='#e8e4da';c.fillRect(px+4+i,py+ph-14,5,10)}break;
+   case 'bed':case 'foxbed':box(c,px,py,pw,ph,'#3e2a1a','#1e140c');
+     for(let i=0;i<w*3;i++)for(let j=0;j<h*2;j++){const hh=hash(x*3+i,y*2+j);c.fillStyle=k==='foxbed'?(hh>.4?'#8a3f9a':'#2f5a2c'):(hh>.5?'#3c6a36':'#2c5228');c.beginPath();c.arc(px+8+i*10.5,py+9+j*14,k==='foxbed'?4:5,0,7);c.fill()}
+     if(k==='foxbed'){c.strokeStyle='#9ab07a';c.beginPath();for(let i=0;i<4;i++){c.moveTo(px+30+i*22,py+40);c.lineTo(px+34+i*22,py+46)}c.stroke()}break;
+   case 'bench':box(c,px,py+2,pw,ph-4,'#6b5a3f','#2a2010','#86734f');c.fillStyle='#7a7a7a';c.beginPath();c.arc(px+pw/2,py+16,7,0,7);c.fill();c.fillStyle='#4a6a3a';c.beginPath();c.arc(px+pw/2,py+16,3,0,7);c.fill();c.fillStyle='#d8d0bf';c.fillRect(px+pw/2+14,py+10,12,8);break;
+   case 'cabinet':box(c,px,py,pw,ph,'#5a5e66','#22252a','#70747c');for(let i=0;i<w;i++){c.fillStyle='#c9a24a';c.fillRect(px+i*TS+12,py+14,8,3)}break;
+   case 'crate':for(let i=0;i<w;i++)for(let j=0;j<h;j++){const xx=px+i*TS,yy=py+j*TS;box(c,xx+2,yy+2,TS-4,TS-4,'#7a5a34','#2a1a0c');c.strokeStyle='#4a3218';c.lineWidth=2;c.beginPath();c.moveTo(xx+4,yy+4);c.lineTo(xx+TS-4,yy+TS-6);c.moveTo(xx+TS-4,yy+4);c.lineTo(xx+4,yy+TS-6);c.stroke();c.lineWidth=1}break;
+   case 'barrel':c.fillStyle='#5a3a1e';c.beginPath();c.arc(px+16,py+16,12,0,7);c.fill();c.strokeStyle='#2a2a2a';c.lineWidth=2;c.beginPath();c.arc(px+16,py+16,9,0,7);c.stroke();c.lineWidth=1;break;
+   case 'lever':c.fillStyle='#2a2a2e';c.fillRect(px+6,py+18,20,10);break;
+   case 'water':c.fillStyle='#0f1d2a';c.fillRect(px,py,pw,ph);c.strokeStyle='rgba(120,160,200,.12)';for(let i=0;i<40;i++){const hx=hash(i,7)*pw,hy=hash(7,i)*ph;c.beginPath();c.moveTo(px+hx,py+hy);c.lineTo(px+hx+14,py+hy);c.stroke()}break;
+   case 'jetty':c.fillStyle='#6a5236';c.fillRect(px+2,py,pw-4,ph);c.fillStyle='rgba(0,0,0,.3)';for(let j=0;j<ph;j+=8)c.fillRect(px+2,py+j,pw-4,1);break;
+   case 'boat':c.fillStyle='#4a2e18';c.beginPath();c.ellipse(px+pw/2,py+ph/2,pw/2-4,ph/2-6,0,0,7);c.fill();c.fillStyle='#6b4a2f';c.beginPath();c.ellipse(px+pw/2,py+ph/2,pw/2-10,ph/2-12,0,0,7);c.fill();c.fillStyle='#3a2410';c.fillRect(px+pw/2-2,py+10,4,ph-20);break;
+   case 'outline':c.strokeStyle='rgba(240,240,235,.75)';c.lineWidth=2;c.setLineDash([5,3]);c.beginPath();
+     const cx=px+48,cy=py+44;c.arc(cx-28,cy-14,9,0,7);c.moveTo(cx-19,cy-12);c.lineTo(cx+16,cy-6);c.lineTo(cx+36,cy-20);c.moveTo(cx+16,cy-6);c.lineTo(cx+38,cy+6);c.moveTo(cx-10,cy-11);c.lineTo(cx-4,cy+12);c.moveTo(cx-4,cy-14);c.lineTo(cx+4,cy-34);c.stroke();c.setLineDash([]);c.lineWidth=1;break;
+   case 'mud':c.fillStyle='rgba(40,28,16,.75)';for(let i=0;i<8;i++){c.beginPath();c.ellipse(px+14+i*14,py+12+(i%2)*20+Math.sin(i)*4,3.5,6,.3,0,7);c.fill()}break;
+   case 'stairs':break;
+  }
+}
+function roomBg(rid,fl){
+  const key=rid+(fl.booksOpen?1:0)+(fl.gateOpen?1:0);if(bgCache[key])return bgCache[key];
+  const R=ROOMS[rid],o=document.createElement('canvas');o.width=W*2;o.height=H*2;const c=o.getContext('2d');c.scale(2,2);
+  drawFloor(c,R);for(const f of R.furn)drawFurn(c,f,fl);drawWalls(c,R,fl);
+  if(rid==='library'&&fl.booksOpen){c.fillStyle='#08080a';c.fillRect(6*TS+3,HUD+TS,TS-6,TS-4);c.fillStyle='#3a3a40';for(let i=0;i<4;i++)c.fillRect(6*TS+5,HUD+TS+4+i*6,TS-10,3)}
+  if(rid==='cellar'){c.fillStyle='#3a3a40';for(let i=0;i<4;i++)c.fillRect(6*TS+5,HUD+TS+2+i*7,TS-10,3)}
+  return bgCache[key]=o;
+}
+const disp={};
+function pos(p,dt){
+  const k=pkey(p);if(role!=='client')return p;
+  let d=disp[k];if(!d||Math.hypot(d.x-p.x,d.y-p.y)>3){d=disp[k]={x:p.x,y:p.y}}
+  const a=Math.min(1,dt*14);d.x+=(p.x-d.x)*a;d.y+=(p.y-d.y)*a;return d;
+}
+let lightning=0,nextLightning=6,lightCv=document.createElement('canvas');lightCv.width=W*2;lightCv.height=H*2;const lctx=lightCv.getContext('2d');lctx.scale(2,2);
+function drawPlayer(p,q,t){
+  const x=q.x*TS,y=q.y*TS+HUD,col=COLORS[p.c];
+  ctx.fillStyle='rgba(0,0,0,.4)';ctx.beginPath();ctx.ellipse(x,y+10,11,5,0,0,7);ctx.fill();
+  const bob=p.mv?Math.sin(t*14)*1.5:0;
+  ctx.fillStyle='#2a2620';ctx.beginPath();ctx.arc(x,y+2+bob,11,0,7);ctx.fill();
+  ctx.fillStyle=col;ctx.beginPath();ctx.arc(x,y+2+bob,9,0,7);ctx.fill();
+  ctx.fillStyle='#e0c4a0';ctx.beginPath();ctx.arc(x+Math.cos(p.d)*3,y-3+bob+Math.sin(p.d)*2,5.5,0,7);ctx.fill();
+  ctx.fillStyle='#1c1a17';ctx.beginPath();ctx.ellipse(x,y-6+bob,11,4.5,0,0,7);ctx.fill();ctx.beginPath();ctx.ellipse(x,y-9+bob,6.5,4.5,0,0,7);ctx.fill();
+  ctx.fillStyle=col;ctx.fillRect(x-6.5,y-8+bob,13,1.8);
+  ctx.font='bold 10px "Courier Prime",monospace';ctx.textAlign='center';ctx.fillStyle='rgba(0,0,0,.7)';const tw=ctx.measureText(p.n).width+8;ctx.fillRect(x-tw/2,y-29,tw,12);ctx.fillStyle=col;ctx.fillText(p.n,x,y-20);
+}
+function drawNpc(s,t){
+  const x=(s.x+.5)*TS,y=(s.y+.5)*TS+HUD;
+  ctx.fillStyle='rgba(0,0,0,.4)';ctx.beginPath();ctx.ellipse(x,y+10,11,5,0,0,7);ctx.fill();
+  ctx.fillStyle='#16141a';ctx.beginPath();ctx.arc(x,y+2,11,0,7);ctx.fill();ctx.fillStyle=s.npc;ctx.beginPath();ctx.arc(x,y+2,9,0,7);ctx.fill();
+  ctx.fillStyle='#d8b896';ctx.beginPath();ctx.arc(x,y-4+Math.sin(t*1.5+s.x)*.6,6,0,7);ctx.fill();
+  ctx.fillStyle='#2a2018';ctx.beginPath();ctx.arc(x,y-7,5.5,Math.PI,0);ctx.fill();
+  ctx.font='italic 11px "IM Fell English",Georgia,serif';ctx.textAlign='center';ctx.fillStyle='rgba(232,220,192,.85)';ctx.fillText(s.nm,x,y-17);
+}
+function spotLabel(s){return s.l}
+function render(dt,t){
+  ctx.fillStyle='#07080b';ctx.fillRect(0,0,W,H);
+  if(!G||(G.ph!=='play'&&G.ph!=='end')){drawAttract(t);return}
+  const R=ROOMS[G.rm];
+  ctx.drawImage(roomBg(G.rm,G.fl),0,0,W,H);
+  const F=G.fl;
+  // dynamic objects: spot glints, levers, fire glow
+  for(const f of R.furn){ if(f[4]==='fire'){const px=f[0]*TS+f[2]*TS/2,py=f[1]*TS+HUD+20;const fl=Math.sin(t*9)*2+Math.sin(t*23);ctx.fillStyle='#e07a2a';ctx.beginPath();ctx.ellipse(px,py+2,12+fl,7,0,0,7);ctx.fill();ctx.fillStyle='#ffd36a';ctx.beginPath();ctx.ellipse(px,py+3,6,4+fl*.5,0,0,7);ctx.fill()} }
+  if(G.rm==='boathouse'){ctx.strokeStyle='rgba(140,180,220,.18)';for(let i=0;i<14;i++){const xx=40+((i*67+t*18)%880),yy=HUD+10*TS+20+(i*37)%130;ctx.beginPath();ctx.moveTo(xx,yy);ctx.lineTo(xx+18,yy);ctx.stroke()}}
+  for(const s of R.spots){
+    if(s.npc){drawNpc(s,t);continue}
+    const x=(s.x+.5)*TS,y=(s.y+.5)*TS+HUD;
+    if(s.id==='leverA'||s.id==='leverB'){
+      const v=F[s.id==='leverA'?'lvA':'lvB']||0,down=v>0||F.gateOpen;
+      ctx.strokeStyle='#8a8a92';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x,y+6);ctx.lineTo(x+(down?10:-10),y-10);ctx.stroke();ctx.lineWidth=1;
+      ctx.fillStyle=down?'#c94a3a':'#5a5a62';ctx.beginPath();ctx.arc(x+(down?10:-10),y-10,4,0,7);ctx.fill();
+      if(v>0&&!F.gateOpen){ctx.strokeStyle='#c9a24a';ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,y,17,-Math.PI/2,-Math.PI/2+Math.PI*2*(v/8));ctx.stroke();ctx.lineWidth=1}
+    }
+    const seen=F['s_'+s.id];
+    const pulse=(Math.sin(t*3+s.x)+1)/2;
+    if(!seen){ctx.fillStyle=`rgba(255,220,120,${.35+pulse*.5})`;ctx.save();ctx.translate(x+8,y-8);ctx.rotate(t*.8);ctx.fillRect(-1,-6,2,12);ctx.fillRect(-6,-1,12,2);ctx.restore()}
+  }
+  // players
+  const shown=G.pl.map(p=>({p,q:pos(p,dt)}));
+  shown.sort((a,b)=>a.q.y-b.q.y).forEach(({p,q})=>drawPlayer(p,q,t));
+  // lighting
+  if(!reduceMotion&&!R.secret){nextLightning-=dt;if(nextLightning<=0){lightning=.5;nextLightning=12+Math.random()*20;setTimeout(()=>SFX.thunder(),700+Math.random()*900)}}
+  lightning=Math.max(0,lightning-dt);
+  const flash=lightning>0?(Math.sin(lightning*40)>0?.55:.25):0;
+  lctx.globalCompositeOperation='source-over';lctx.clearRect(0,0,W,H);
+  lctx.fillStyle=`rgba(4,5,10,${Math.max(0,R.dark-flash)})`;lctx.fillRect(0,HUD,W,H-HUD);
+  lctx.globalCompositeOperation='destination-out';
+  const light=(x,y,r,a=1)=>{const g=lctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,`rgba(0,0,0,${a})`);g.addColorStop(1,'rgba(0,0,0,0)');lctx.fillStyle=g;lctx.beginPath();lctx.arc(x,y,r,0,7);lctx.fill()};
+  for(const {p,q} of shown){
+    const x=q.x*TS,y=q.y*TS+HUD;light(x,y,TS*2.6,.95);
+    const g=lctx.createRadialGradient(x,y,0,x,y,TS*7.5);g.addColorStop(0,'rgba(0,0,0,.9)');g.addColorStop(1,'rgba(0,0,0,0)');lctx.fillStyle=g;
+    lctx.beginPath();lctx.moveTo(x,y);lctx.arc(x,y,TS*7.5,p.d-.5,p.d+.5);lctx.closePath();lctx.fill();
+  }
+  for(const [lx,ly,lr] of R.lamps){const fl=1+Math.sin(t*7+lx)*.04;light(lx*TS,ly*TS+HUD,lr*TS*fl,.85)}
+  for(const f of R.furn)if(f[4]==='fire')light(f[0]*TS+f[2]*TS/2,f[1]*TS+HUD+20,TS*4.5*(1+Math.sin(t*8)*.05),.9);
+  for(const [wx,wy] of R.windows)light(wx*TS+16,wy*TS+HUD+16,TS*(1.4+flash*4),.5+flash);
+  for(const s of R.spots)if(!F['s_'+s.id]&&!s.npc)light((s.x+.5)*TS,(s.y+.5)*TS+HUD,TS*.9,.5);
+  ctx.drawImage(lightCv,0,0,W,H);
+  // warm lamp tint
+  ctx.globalCompositeOperation='lighter';
+  for(const [lx,ly,lr] of R.lamps){const g=ctx.createRadialGradient(lx*TS,ly*TS+HUD,0,lx*TS,ly*TS+HUD,lr*TS);g.addColorStop(0,'rgba(120,70,20,.22)');g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.fillRect(lx*TS-lr*TS,ly*TS+HUD-lr*TS,lr*TS*2,lr*TS*2)}
+  ctx.globalCompositeOperation='source-over';
+  // prompts for local players
+  if(!G.md&&G.ph==='play')for(const lp of localPlayers){
+    const p=G.pl.find(p=>p.o===cid&&p.li===lp.li);if(!p)continue;const q=pos(p,0);
+    let best=null,bd=1.45;for(const s of R.spots){const d=Math.hypot(q.x-(s.x+.5),q.y-(s.y+.5));if(d<bd){bd=d;best=s}}
+    if(best){const x=(best.x+.5)*TS,y=(best.y+.5)*TS+HUD-26;const label=(lp.dev.startsWith('gp')?'A':lp.dev==='kb2'?'/':'E')+'  '+spotLabel(best);
+      ctx.font='bold 12px "Courier Prime",monospace';const tw=ctx.measureText(label).width+16;ctx.fillStyle='rgba(232,220,192,.95)';ctx.fillRect(x-tw/2,y-14,tw,20);ctx.fillStyle=COLORS[p.c];ctx.fillRect(x-tw/2,y+4,tw,2);
+      ctx.fillStyle='#1a120a';ctx.textAlign='center';ctx.fillText(label,x,y);}
+  }
+  drawHud(t);
+  // toasts
+  ctx.textAlign='center';
+  G.ts.forEach((ts,i)=>{const age=G.tm-ts.t,a=Math.min(1,(4.5-age)*2);ctx.globalAlpha=Math.max(0,a);ctx.font='bold 14px "Courier Prime",monospace';const tw=ctx.measureText(ts.s).width+28;const y=H-40-(G.ts.length-1-i)*30;
+    ctx.fillStyle='rgba(12,14,19,.9)';ctx.fillRect(W/2-tw/2,y-17,tw,26);ctx.fillStyle='#c9a24a';ctx.fillRect(W/2-tw/2,y-17,3,26);ctx.fillStyle='#e8dcc0';ctx.fillText(ts.s,W/2,y);ctx.globalAlpha=1});
+  if(G.md)drawModal(t);
+  if(G.ph==='end')drawEnd(t);
+}
+function drawHud(t){
+  ctx.fillStyle='#0c0e13';ctx.fillRect(0,0,W,HUD);ctx.fillStyle='#c9a24a';ctx.fillRect(0,HUD-1,W,1);
+  ctx.textAlign='left';ctx.font='18px "IM Fell English SC",Georgia,serif';ctx.fillStyle='#e8dcc0';ctx.fillText(ROOMS[G.rm].name,14,22);
+  if(ROOMS[G.rm].secret){const w=ctx.measureText(ROOMS[G.rm].name).width;ctx.font='bold 10px "Courier Prime",monospace';ctx.fillStyle='#c94a3a';ctx.fillText('SECRET LOCATION',24+w,21)}
+  ctx.textAlign='center';ctx.font='bold 12px "Courier Prime",monospace';ctx.fillStyle='#b9ad93';
+  ctx.fillText(`CLUES ${G.cl.length}/${CLUE_TOTAL}   ·   ACCUSATIONS LEFT ${3-G.sk}${role!=='local'&&G.code?'   ·   ROOM '+G.code:''}`,W/2,21);
+  ctx.textAlign='right';let x=W-12;
+  for(let i=G.pl.length-1;i>=0;i--){const p=G.pl[i];ctx.font='bold 11px "Courier Prime",monospace';const w=ctx.measureText(p.n).width;ctx.fillStyle=COLORS[p.c];ctx.fillText(p.n,x,21);ctx.beginPath();ctx.arc(x-w-8,17,4,0,7);ctx.fill();x-=w+24}
+}
+function panel(x,y,w,h){
+  ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(0,HUD,W,H-HUD);
+  ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(x+6,y+8,w,h);
+  ctx.fillStyle='#e8dcc0';ctx.fillRect(x,y,w,h);
+  ctx.strokeStyle='rgba(80,60,30,.09)';for(let yy=y+30;yy<y+h;yy+=24){ctx.beginPath();ctx.moveTo(x,yy+.5);ctx.lineTo(x+w,yy+.5);ctx.stroke()}
+  ctx.fillStyle='#9b2f2f';ctx.fillRect(x,y,w,4);
+}
+function ownerName(){const p=G.pl.find(p=>pkey(p)===G.md.ow);return p?{n:p.n,c:COLORS[p.c],mine:p.o===cid}:{n:'',c:'#888',mine:false}}
+function footer(x,y,w,h,hint){
+  const o=ownerName();ctx.font='bold 12px "Courier Prime",monospace';ctx.textAlign='left';ctx.fillStyle=o.c;ctx.fillRect(x+20,y+h-28,8,8);ctx.fillStyle='#5a4a34';
+  ctx.fillText((o.mine?o.n+' (you) is in control':o.n+' is in control. Talk it through!'),x+34,y+h-20);
+  ctx.textAlign='right';ctx.fillStyle='#1a120a';ctx.fillText(hint,x+w-20,y+h-20);
+}
+function drawModal(t){
+  const m=G.md,x=150,y=90,w=660,h=400;panel(x,y,w,h);
+  ctx.textAlign='left';ctx.fillStyle='#1a120a';
+  const title=(s)=>{ctx.font='30px "IM Fell English SC",Georgia,serif';ctx.fillStyle='#1a120a';ctx.fillText(s,x+28,y+50)};
+  if(m.ty==='text'){
+    const T=TEXT[m.id];title(T.t);
+    ctx.font='17px "Courier Prime",monospace';ctx.fillStyle='#2a2016';
+    const lines=wrap(ctx,T.p[Math.min(m.pg,T.p.length-1)],w-60);lines.forEach((l,i)=>ctx.fillText(l,x+28,y+96+i*26));
+    ctx.font='bold 12px "Courier Prime",monospace';ctx.fillStyle='#7a5a24';ctx.textAlign='right';ctx.fillText(`${Math.min(m.pg+1,T.p.length)} / ${T.p.length}`,x+w-24,y+48);
+    footer(x,y,w,h,m.pg+1<T.p.length?'[A] Next  [B] Close':'[A] Close');
+  } else if(m.ty==='code'){
+    title('Wall safe');ctx.font='15px "Courier Prime",monospace';ctx.fillStyle='#2a2016';ctx.fillText('A four-number combination dial. Harrow lived by his clocks.',x+28,y+86);
+    for(let i=0;i<4;i++){const bx=x+150+i*95,by=y+130;ctx.fillStyle=i===m.sel?'#9b2f2f':'#1d1a16';ctx.fillRect(bx,by,74,110);ctx.fillStyle='#e8dcc0';ctx.font='bold 64px "Courier Prime",monospace';ctx.textAlign='center';ctx.fillText(m.dg[i],bx+37,by+78);
+      if(i===m.sel){ctx.fillStyle='#9b2f2f';ctx.beginPath();ctx.moveTo(bx+37,by-16);ctx.lineTo(bx+27,by-4);ctx.lineTo(bx+47,by-4);ctx.fill();ctx.beginPath();ctx.moveTo(bx+37,by+126);ctx.lineTo(bx+27,by+114);ctx.lineTo(bx+47,by+114);ctx.fill()}
+      if(i===1){ctx.fillStyle='#1a120a';ctx.font='bold 40px "Courier Prime",monospace';ctx.fillText(':',bx+84,by+70)}}
+    ctx.textAlign='left';footer(x,y,w,h,'[←→] Dial  [↑↓] Turn  [A] Try  [B] Leave');
+  } else if(m.ty==='books'){
+    title('The poetry shelf');ctx.font='15px "Courier Prime",monospace';ctx.fillStyle='#2a2016';ctx.fillText('Six books of verse, each in a different binding. They pull out like levers.',x+28,y+86);
+    for(let i=0;i<6;i++){const bx=x+90+i*82,by=y+120,sel=i===m.sel;ctx.fillStyle=BOOKS[i].c;ctx.fillRect(bx,by-(sel?14:0),56,160);ctx.fillStyle='rgba(255,255,255,.18)';ctx.fillRect(bx+6,by+20-(sel?14:0),44,4);ctx.fillRect(bx+6,by+130-(sel?14:0),44,4);
+      ctx.fillStyle=sel?'#9b2f2f':'#5a4a34';ctx.font='bold 13px "Courier Prime",monospace';ctx.textAlign='center';ctx.fillText(BOOKS[i].n,bx+28,by+184);}
+    ctx.textAlign='left';ctx.font='bold 13px "Courier Prime",monospace';ctx.fillStyle='#5a4a34';ctx.fillText('Pulled: '+(m.seq.length?m.seq.map(i=>BOOKS[i].n).join(' → '):'none yet'),x+28,y+h-52);
+    footer(x,y,w,h,'[←→] Choose  [A] Pull  [B] Leave');
+  } else if(m.ty==='cipher'){
+    title("Harrow's desk");ctx.font='15px "Courier Prime",monospace';ctx.fillStyle='#2a2016';
+    wrap(ctx,'A note in Harrow\'s hand, written in some kind of code. Beside it, a brass cipher wheel. The wheel turns letters backwards along the alphabet.',w-60).forEach((l,i)=>ctx.fillText(l,x+28,y+86+i*22));
+    ctx.font='bold 22px "Courier Prime",monospace';ctx.fillStyle='#7a5a24';ctx.fillText(CIPHER_ENC,x+28,y+170);
+    const dec=caesar(CIPHER_ENC,-m.sh);ctx.fillStyle='#1a120a';ctx.fillText(dec,x+28,y+215);
+    const cx=x+w/2,cy=y+300;ctx.strokeStyle='#7a5a24';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,40,0,7);ctx.stroke();ctx.lineWidth=1;
+    ctx.font='bold 28px "Courier Prime",monospace';ctx.textAlign='center';ctx.fillStyle='#9b2f2f';ctx.fillText(m.sh,cx,cy+10);ctx.font='bold 11px "Courier Prime",monospace';ctx.fillStyle='#5a4a34';ctx.fillText('STEPS BACK',cx,cy+58);
+    ctx.textAlign='left';footer(x,y,w,h,'[←→] Turn wheel  [A] Read it  [B] Leave');
+  } else if(m.ty==='board'){
+    title('Case board');ctx.font='15px "Courier Prime",monospace';ctx.fillStyle='#2a2016';ctx.fillText('Photographs, string and pins. Everything you know so far.',x+28,y+86);
+    ['Review the case journal','Make an accusation','Step away'].forEach((s,i)=>{const by=y+120+i*62;ctx.fillStyle=i===m.sel?'#9b2f2f':'#1d1a16';ctx.fillRect(x+28,by,w-56,46);ctx.fillStyle='#e8dcc0';ctx.font='bold 18px "Courier Prime",monospace';ctx.fillText(s,x+48,by+30)});
+    ctx.font='13px "Courier Prime",monospace';ctx.fillStyle='#5a4a34';ctx.fillText(`${3-G.sk} accusation${3-G.sk===1?'':'s'} left before the case goes cold.`,x+28,y+h-52);
+    footer(x,y,w,h,'[↑↓] Choose  [A] Select  [B] Close');
+  } else if(m.ty==='journal'){
+    title('Case journal');ctx.font='bold 12px "Courier Prime",monospace';ctx.textAlign='right';ctx.fillStyle='#7a5a24';ctx.fillText(`${G.cl.length} / ${CLUE_TOTAL} CLUES`,x+w-24,y+48);ctx.textAlign='left';
+    if(!G.cl.length){ctx.font='16px "Courier Prime",monospace';ctx.fillStyle='#5a4a34';ctx.fillText('Nothing yet. Examine anything that glints.',x+28,y+100)}
+    G.cl.slice(m.sc,m.sc+5).forEach((id,i)=>{const by=y+80+i*56,C=CLUES[id];ctx.font='bold 15px "Courier Prime",monospace';ctx.fillStyle=C.s.startsWith('SECRET')?'#9b2f2f':'#1a120a';ctx.fillText(C.t,x+28,by+14);
+      ctx.font='13px "Courier Prime",monospace';ctx.fillStyle='#3a2e20';wrap(ctx,C.s,w-60).slice(0,2).forEach((l,j)=>ctx.fillText(l,x+28,by+32+j*16))});
+    if(G.cl.length>5){ctx.fillStyle='#7a5a24';ctx.font='bold 12px "Courier Prime",monospace';ctx.fillText(`${m.sc+1}–${Math.min(G.cl.length,m.sc+5)} of ${G.cl.length}  (↑↓ to scroll)`,x+28,y+h-48)}
+    footer(x,y,w,h,'[A]/[B] Close');
+  } else if(m.ty==='accuse'){
+    title('Make an accusation');ctx.font='14px "Courier Prime",monospace';ctx.fillStyle='#2a2016';ctx.fillText('Inspector Rourke needs who, why, and how.',x+28,y+82);
+    ACCUSE.forEach((r,i)=>{const by=y+104+i*66,sel=m.row===i;ctx.fillStyle=sel?'#9b2f2f':'#1d1a16';ctx.fillRect(x+28,by,w-56,52);
+      ctx.font='bold 11px "Courier Prime",monospace';ctx.fillStyle='#c9a24a';ctx.fillText(r.l.toUpperCase(),x+44,by+18);
+      ctx.font='bold 16px "Courier Prime",monospace';ctx.fillStyle='#e8dcc0';ctx.fillText('‹  '+r.o[m.sel[i]]+'  ›',x+44,by+40)});
+    const by=y+104+3*66,sel=m.row===3;ctx.fillStyle=sel?'#9b2f2f':'transparent';ctx.fillRect(x+28,by,w-56,40);ctx.strokeStyle='#1d1a16';ctx.lineWidth=2;ctx.strokeRect(x+28,by,w-56,40);ctx.lineWidth=1;
+    ctx.font='bold 16px "Courier Prime",monospace';ctx.fillStyle=sel?'#e8dcc0':'#1a120a';ctx.textAlign='center';ctx.fillText('Submit accusation',x+w/2,by+26);ctx.textAlign='left';
+    footer(x,y,w,h,'[↑↓] Row  [←→] Change  [A] Submit  [B] Back');
+  }
+}
+function drawEnd(t){
+  ctx.fillStyle='rgba(6,7,10,.9)';ctx.fillRect(0,0,W,H);ctx.textAlign='center';
+  ctx.font='64px "IM Fell English SC",Georgia,serif';ctx.fillStyle=G.win?'#c9a24a':'#9b2f2f';ctx.fillText(G.win?'Case Closed':'Case Cold',W/2,H/2-40);
+  ctx.font='16px "Courier Prime",monospace';ctx.fillStyle='#e8dcc0';
+  ctx.fillText(G.win?`Solved with ${G.cl.length} of ${CLUE_TOTAL} clues and ${G.sk} wrong accusation${G.sk===1?'':'s'}.`:'The killer walked free this time.',W/2,H/2+4);
+  ctx.fillText(G.pl.map(p=>p.n).join('  ·  '),W/2,H/2+34);
+  if(G.tm>(G.endT||0)){ctx.fillStyle='#b9ad93';ctx.fillText(role==='client'?'Waiting for the host…':'Press A / E to return to the title',W/2,H/2+90)}
+}
+function drawAttract(t){
+  // moody animated backdrop behind menus
+  const g=ctx.createRadialGradient(W/2,H*.55,20,W/2,H*.55,W*.7);g.addColorStop(0,'#1d2130');g.addColorStop(1,'#07080b');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#0b0c10';ctx.beginPath();ctx.moveTo(180,H);ctx.lineTo(180,260);ctx.lineTo(300,170);ctx.lineTo(420,260);ctx.lineTo(420,210);ctx.lineTo(480,130);ctx.lineTo(540,210);ctx.lineTo(540,260);ctx.lineTo(660,170);ctx.lineTo(780,260);ctx.lineTo(780,H);ctx.fill();
+  const wins=[[230,300],[330,300],[460,240],[600,300],[700,300],[230,390],[330,390],[600,390],[700,390],[465,330]];
+  wins.forEach(([x,y],i)=>{const on=hash(i,Math.floor(t*.3))>.35||i===9;ctx.fillStyle=on?`rgba(230,170,80,${.55+Math.sin(t*2+i)*.1})`:'#15161c';ctx.fillRect(x,y,30,44)});
+  ctx.strokeStyle='rgba(150,170,200,.18)';ctx.beginPath();for(let i=0;i<120;i++){const x=(hash(i,1)*W+t*60)%W,y=(hash(1,i)*H+t*420)%H;ctx.moveTo(x,y);ctx.lineTo(x-3,y+12)}ctx.stroke();
+}
+
+/* ---------------------------- MAIN LOOP ---------------------------- */
+let last=performance.now();
+function fit(){const s=Math.min(innerWidth/W,innerHeight/H);cv.style.width=Math.floor(W*s)+'px';cv.style.height=Math.floor(H*s)+'px'}
+addEventListener('resize',fit);fit();
+function playFx(){
+  if(!G||!G.fx)return;
+  for(const f of G.fx){ if(f.i>fxSeen){fxSeen=f.i; if(f.k==='rumble')rumble(.8,300); else {SFX[f.k]&&SFX[f.k](); if(f.k==='clue'||f.k==='unlock')rumble(.5,150)} } }
+}
+let prevRole=null,prevG=null;
+function loop(now){
+  const dt=Math.min(.05,(now-last)/1000);last=now;
+  sampleKeyboard();samplePads();uiPadNav();
+  if(G&&(G.ph==='lobby'||G.ph==='play'))lobbyJoins();else syncSeenIfIdle();
+  rosterWatch();
+  padPauseCheck();
+  if(G&&role!=='client'&&!(screen==='pause'&&role==='local'))hostTick(dt);
+  netTick(dt);
+  if(G!==prevG||role!==prevRole){if(!G||role!==prevRole)fxSeen=G?G.fxn||0:0;prevG=G;prevRole=role}
+  playFx();
+  if(G&&(G.ph==='play'||G.ph==='end')&&!ui.hidden&&screen!=='pause'){refreshUI()}
+  render(dt,now/1000);
+  requestAnimationFrame(loop);
+}
+let idleSync=0;function syncSeenIfIdle(){ if(!G||G.ph!=='lobby'){for(const id in devs){devs[id]._seenA=devs[id].c.a}} }
+checkRoom();
+if(document.fonts&&document.fonts.load){Promise.all([document.fonts.load('30px "IM Fell English SC"'),document.fonts.load('16px "Courier Prime"'),document.fonts.load('bold 16px "Courier Prime"')]).catch(()=>{}).then(()=>{for(const k in bgCache)delete bgCache[k]})}
+showScreen('title');
+setTimeout(()=>{if(screen==='title'&&!ui.hidden)refreshUI()},1500);
+requestAnimationFrame(loop);
+addEventListener('beforeunload',()=>{try{if(net&&role==='client')net.toHost('bye',{cid})}catch(e){}});
+</script>
+
+</body></html>
