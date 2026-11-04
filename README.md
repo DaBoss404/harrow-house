@@ -1,24 +1,31 @@
 # Harrow House
 
-A 1–4 player co-op murder mystery that runs in the browser. Search the house, solve its puzzles, uncover the homeowner's secrets, find the hidden rooms and name the killer.
+A first-person detective game for the browser. Five murder cases, each with its own map, locks and puzzles. Search the scene, complete your objectives, uncover the suspects through the evidence, and name the killer.
 
 **Play:** https://harrow-house.vercel.app (once deployed on Vercel)
 
-- First-person 3D, with split-screen couch co-op
-- Xbox controller support (up to 4), plus keyboard and mouse
-- Online co-op with room codes and built-in voice chat
-- Text chat with `T`
+## The cases
+1. **The Harrow House Case** (easy): a clockmaker dead in a locked study.
+2. **The Keeper of Gull Rock** (medium): a lighthouse keeper at the foot of her tower.
+3. **Blackout at the Varga Gallery** (medium): an art dealer dead in the dark.
+4. **Snowbound at Kessler Lodge** (hard): a famous climber dead in a mountain lodge.
+5. **The Final Curtain** (hard): a leading lady poisoned on opening night.
+
+## Features
+- Solo play, or online co-op for 2–4 detectives with room codes, voice chat and text chat (`T`)
+- Xbox controller, keyboard and mouse
+- Objectives for every lock and puzzle, light switches in every room, brass plates beside each door
 
 ## Controls
-| Action | Controller | Keyboard |
+| Action | Controller | Keyboard / mouse |
 |---|---|---|
 | Move | Left stick | WASD |
-| Look | Right stick | Mouse (click the view) or ←→ |
-| Examine / confirm | A | E, Space or Enter |
+| Look | Right stick | Mouse (click the view) or ← → |
+| Examine / use | A or RT | E, Space, Enter or left click |
 | Back | B | Q |
-| Case journal | Y | Tab |
+| Journal | Y | Tab |
 | Pause | Menu | Esc |
 | Mute mic | View | V |
 
 ## Editing
-`game.html` is the source. Run `./build.sh` to regenerate `harrow-house-standalone.html`, then copy it to `index.html`.
+`game.html` is the source. Run `./build.sh` to regenerate `harrow-house-standalone.html` and `index.html`.
