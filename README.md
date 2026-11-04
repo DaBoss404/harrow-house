@@ -15,6 +15,7 @@ A first-person detective game for the browser. Five murder cases, each with its 
 - Solo play, or online co-op for 2–4 detectives with room codes, voice chat and text chat (`T`)
 - Xbox controller, keyboard and mouse
 - Objectives for every lock and puzzle, light switches in every room, brass plates beside each door
+- Inventory (`I` or controller `X`) holding every note you read, plus keys and bagged evidence
 
 ## Controls
 | Action | Controller | Keyboard / mouse |
@@ -24,6 +25,7 @@ A first-person detective game for the browser. Five murder cases, each with its 
 | Examine / use | A or RT | E, Space, Enter or left click |
 | Back | B | Q |
 | Journal | Y | Tab |
+| Inventory | X | I |
 | Pause | Menu | Esc |
 | Mute mic | View | V |
 
