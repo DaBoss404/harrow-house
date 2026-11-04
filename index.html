@@ -1122,6 +1122,7 @@ const Amb={L:{},last:{},init(){
     if(v&&R3)for(const f of R3.fires){const d=Math.hypot(f.light.position.x-v.x,f.light.position.z-v.y);if(d<5&&Math.random()<dt*14*(1-d/5)){noise(now(),.02+Math.random()*.03,.12*(1-d/5),'bandpass',1500+Math.random()*2500,2,busAmb)}if(d<6)tg.tone=Math.max(tg.tone,.35)}
     if(R3&&R3.hasClock){this.clk=(this.clk||0)+dt;if(this.clk>1){this.clk=0;noise(now(),.015,.05,'bandpass',3800,6,busAmb);osc('square',1800,now(),.01,.012,busAmb)}}
   }
+  tg.rain=0;tg.drops=0; // rain removed
   for(const k in tg)this.set(k,tg[k]);
  }};
 // ---- footsteps
@@ -1395,7 +1396,7 @@ function refreshUI(msg){
   } else if(screen==='sound'){
     const sl=(id,l,v)=>`<div class="field"><label for="${id}">${l} <span class="muted" id="${id}-v">${Math.round(v*100)}%</span></label><input type="range" id="${id}" data-nav data-vol="${id.slice(4)}" min="0" max="1" step="0.05" value="${v}" style="padding:0;accent-color:#9b2f2f"></div>`;
     h=`<div class="card"><div class="eyebrow">Settings</div><h2>Sound</h2>
-    <div class="stack" style="margin-top:6px">${sl('vol-music','Music',VOL.music)}${sl('vol-sfx','Sound effects',VOL.sfx)}${sl('vol-amb','Ambience (rain, wind, sea)',VOL.amb)}</div>
+    <div class="stack" style="margin-top:6px">${sl('vol-music','Music',VOL.music)}${sl('vol-sfx','Sound effects',VOL.sfx)}${sl('vol-amb','Ambience (wind, sea, fire)',VOL.amb)}</div>
     <div class="stack"><button data-nav data-act="mute">${VOL.muted?'Unmute':'Mute all'} <span class="k">M</span></button><button data-nav data-act="soundback" data-back class="ghost">Back</button></div></div>`;
   }
   ui.innerHTML=h;
