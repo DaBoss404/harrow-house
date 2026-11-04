@@ -80,24 +80,41 @@ button.case.cur{outline:3px solid var(--brass)}
 <script>
 "use strict";
 /* ============================ CASE FILES ============================
-   Each case: rooms (w×h tiles incl. walls), spots to examine, puzzles, objectives,
-   evidence (clues) that can point at suspects, and the killer.
-   Spot fields: t text · t2 text on repeat · give {c clues, i items, f flags, o objectives add, d objectives done}
-   lock {i item | f flag, t text, o objective} · pz puzzle · v visual · req flag needed to exist
+   Every playthrough draws 5 suspects from a case's pool of 7 and secretly picks a killer.
+   Each of the 4 main puzzles reveals one trait of the killer. Innocent suspects are generated
+   so each matches the killer on all but one trait, so every puzzle is needed to name them.
+   Text may contain {vars} filled per playthrough (codes, orders, traits).
+   Spot fields: t text · give · lock · pz puzzle · slot (motive letter for lineup suspect #) · trait (reveals killer trait #)
    ==================================================================== */
 const BOOKS=[{n:'Rust',c:'#a8352c'},{n:'Sea',c:'#2f5f9e'},{n:'Moss',c:'#3f7a3a'},{n:'Gold',c:'#c9a24a'},{n:'Plum',c:'#6b3f8a'},{n:'Soot',c:'#2a2a2a'}];
+const NUMW=['zero','one','two','three','four','five','six','seven','eight','nine'];
+const HAND={l:'Handedness',vals:['left','right'],p:'{v}-handed'};
 function caesar(s,k){return s.replace(/[A-Z]/g,c=>String.fromCharCode((c.charCodeAt(0)-65+k+260)%26+65))}
 const CASES={};
 
 /* ---------------------------------------------------------------- 1 */
 CASES.harrow={
- title:'The Harrow House Case',sub:'A clockmaker dead in a locked study.',diff:'Easy',
- victim:'Edith Harrow',killer:'crane',start:{room:'foyer',x:8,y:8,d:-Math.PI/2},startObj:['scene'],
+ title:'The Harrow House Case',sub:'A clockmaker dead in a locked study.',diff:'Medium',
+ victim:'Edith Harrow',start:{room:'foyer',x:8,y:8,d:-Math.PI/2},startObj:['scene'],
  items:{ghKey:'Conservatory key'},
- suspects:{crane:{n:'Dr. Silas Crane',r:'Edith\'s physician'},vivian:{n:'Vivian Harrow',r:'Edith\'s niece'},voss:{n:'Julian Voss',r:'Business partner'},pell:{n:'Margaret Pell',r:'Housekeeper'}},
- obj:{scene:'Examine the body in the study',findKey:'Find the key to the conservatory',safeCode:'Find the code for the wall safe',books:'Work out the order of the poets\' books in the library',
-  cellar:'Explore the passage behind the library shelf',gate:'Open the iron gate in the cellar',cipher:'Decode Edith\'s note',accuse:'Name the killer at the case board in the foyer'},
- levers:[{a:'leverA',b:'leverB',f:'gateOpen',ts:'The iron gate grinds open!',give:{d:['gate']}}],
+ traits:[
+  {l:'Tobacco',vals:['cigar','pipe','cigarette'],f:'A fresh {v} stub on the jetty. The killer smokes.',p:'smokes a {v}'},
+  {...HAND,f:'Edith\'s coded note: whoever she feared is {v}-handed.'},
+  {l:'Footwear',vals:['riding boots','city shoes','galoshes'],f:'Fresh prints in the secret passage: {v}.',p:'wears {v}'},
+  {l:'Ink',vals:['green','blue','violet'],f:'The threat in Edith\'s safe is written in {v} ink.',p:'writes in {v} ink'}],
+ setup(r){const h=9+r(3),m=r(60),clock=h+':'+String(m).padStart(2,'0');const books=r.pick([0,1,2,3,4,5],4);const sh=2+r(8);
+  return{v:{clock,books:books.map(b=>BOOKS[b].n).join(', then '),steps:NUMW[sh],Steps:NUMW[sh][0].toUpperCase()+NUMW[sh].slice(1)},ans:{safe:String(h)+String(m).padStart(2,'0'),books,shift:sh},cipher:t=>`THE ONE I FEAR IS ${t[1]==='left'?'LEFT':'RIGHT'} HANDED`}},
+ pool:{
+  crane:{n:'Dr. Silas Crane',r:'Edith\'s physician',k:'Edith was blackmailing him',doc:'A note from Dr. Crane: "Eight years I have paid you, Edith. Not one penny more. I would sooner see you dead."',story:'Edith had blackmailed him for years over a fatal mistake he made as a young doctor.'},
+  vivian:{n:'Vivian Harrow',r:'Edith\'s niece',k:'Deep in debt to Edith',doc:'An IOU: "I, Vivian Harrow, owe my aunt £2,000." Below it, in Edith\'s hand: "Due by Christmas, or I tell the family everything."',story:'Edith threatened to expose her gambling debts to the whole family.'},
+  voss:{n:'Julian Voss',r:'Business partner',k:'Facing an audit',doc:'From Julian Voss: "Drop the audit, Edith, or you will be very sorry you ever made me your partner."',story:'Edith\'s audit would have uncovered the money he had been skimming from the firm.'},
+  pell:{n:'Margaret Pell',r:'Housekeeper',k:'Cut out of the will',doc:'Edith\'s reply to Margaret Pell: "You will not be named in my will, Margaret. Ask again and you will be dismissed."',story:'Edith cut her out of the will after thirty years of service.'},
+  finch:{n:'Rev. Arthur Finch',r:'Village vicar',k:'Edith knew his secret',doc:'A letter to Edith from the Bishop\'s office: "Thank you for your concerns about Reverend Finch and the missing roof fund. We will investigate."',story:'Edith had reported him to the Bishop for stealing the church roof fund.'},
+  rowe:{n:'Lady Constance Rowe',r:'Neighbour',k:'Boundary feud',doc:'A solicitor\'s letter: "Lady Rowe will pursue Miss Harrow through every court in England over the east meadow." Scrawled on it: "Or by other means."',story:'Their feud over the east meadow had cost her nearly everything she owned.'},
+  marlow:{n:'Tobias Marlow',r:'Apprentice clockmaker',k:'Edith stole his design',doc:'A patent certificate in Edith\'s name for "Marlow\'s escapement". Tobias has written across it: "THIEF."',story:'Edith patented his clock design under her own name.'}},
+ obj:{scene:'Examine the body in the study',findKey:'Find the key to the conservatory',safeCode:'Find the code for the wall safe',books:'Work out the order of the poets\' books',
+  gate:'Open the iron gate in the cellar',cipher:'Decode Edith\'s note',boat:'Search the boathouse',accuse:'Name the killer at the case board in the foyer'},
+ levers:[{a:'leverA',b:'leverB',f:'gateOpen',ts:'The iron gate grinds open!',give:{d:['gate'],o:['boat']}}],
  rooms:{
   foyer:{name:'Foyer',w:16,h:12,floor:'wood',dark:.7,
    furn:[[5,3,6,5,'rug'],[1,1,2,1,'table'],[13,1,2,1,'table'],[3,4,1,1,'pillar'],[12,4,1,1,'pillar'],[3,8,1,1,'pillar'],[12,8,1,1,'pillar'],[1,10,1,1,'plant'],[14,10,1,1,'plant'],[13,9,1,1,'rack'],[6,10,3,1,'board']],
@@ -105,7 +122,7 @@ CASES.harrow={
    lamps:[[8,6,3.5]],windows:[[4,0],[12,0]],
    spots:[{id:'portrait',x:5,y:1,l:'Portrait',v:'pic',vo:{tex:'portrait'},t:'portrait',give:{c:['motto']}},
     {id:'telegram',x:2,y:1,l:'Inspector\'s note',v:'paper',t:'telegram'},
-    {id:'pellnote',x:13,y:1,l:'Letter',v:'paper',t:'pellNote',give:{c:['pell1']}},
+    {id:'slot0',x:13,y:1,l:'Letter',v:'paper',slot:0},
     {id:'coat',x:13,y:9,l:'Coat rack',t:'coat',t2:'coat2',give:{i:['ghKey'],d:['findKey']}},
     {id:'board',x:7,y:10,l:'Case board',board:1}]},
   study:{name:'Study',w:14,h:10,floor:'carpet',dark:.76,
@@ -114,111 +131,108 @@ CASES.harrow={
    spots:[{id:'body',x:3,y:6,l:'Edith Harrow',v:'body',vo:{c:0x5a3a5a},t:'body',give:{c:['body'],d:['scene']}},
     {id:'clock',x:3,y:1,l:'Mantel clock',v:'clock',t:'clock',give:{c:['clock']}},
     {id:'tea',x:6,y:3,l:'Teacup',v:'cup',t:'tea',give:{c:['tea']}},
-    {id:'vossletter',x:8,y:4,l:'Letter on the desk',v:'paper',t:'vossLetter',give:{c:['voss1']}},
+    {id:'slot1',x:8,y:4,l:'Letter on the desk',v:'paper',slot:1},
     {id:'calendar',x:9,y:1,l:'Calendar',v:'pic',vo:{tex:'calendar'},t:'calendar',give:{c:['calendar']}},
-    {id:'safe',x:10,y:1,l:'Wall safe',v:'safe',pz:{ty:'code',n:4,ans:'1147',o:'safeCode',f:'safeOpen',t:'safeOpen',after:'safeDone',title:'Wall safe',desc:'A four-number dial. Edith lived by her clocks.',give:{c:['diary'],o:['books']}}}]},
+    {id:'safe',x:10,y:1,l:'Wall safe',v:'safe',pz:{ty:'code',n:4,ans:'$safe',o:'safeCode',f:'safeOpen',t:'safeOpen',after:'safeDone',trait:3,title:'Wall safe',desc:'A four-number dial. Edith lived by her clocks.',give:{c:['diary'],o:['books']}}}]},
   library:{name:'Library',w:14,h:10,floor:'wood2',dark:.76,
    furn:[[1,1,2,1,'shelf'],[3,1,1,1,'shelf',{until:'shelfOpen'}],[4,1,4,1,'shelf'],[8,1,3,1,'pshelf'],[11,1,2,1,'shelf'],[5,6,3,2,'table'],[10,6,1,1,'lectern'],[1,8,1,1,'plant']],
    doors:[{x:13,y:5,to:'foyer',sx:1,sy:6},{x:3,y:0,to:'cellar',sx:3,sy:1,req:'shelfOpen'}],lamps:[[6.5,7,3]],windows:[],
-   spots:[{id:'books',x:9,y:1,l:'Poets\' shelf',pz:{ty:'order',items:BOOKS,n:4,ans:[0,1,2,3],o:'books',f:'shelfOpen',t:'shelfOpen',after:'shelfDone',title:'The poets\' shelf',desc:'Six books of verse, each in a different binding. They pull out like levers.',give:{o:['cellar']}}},
+   spots:[{id:'books',x:9,y:1,l:'Poets\' shelf',pz:{ty:'order',items:BOOKS,ans:'$books',o:'books',f:'shelfOpen',t:'shelfOpen',after:'shelfDone',trait:2,title:'The poets\' shelf',desc:'Six books of verse, each in a different binding. They pull out like levers. Four must be pulled, in the right order.'}},
     {id:'lectern',x:10,y:6,l:'Lectern',v:'book',t:'poisonbook',give:{c:['poisonbook']}},
-    {id:'letter',x:6,y:6,l:'Unfinished letter',v:'paper',t:'letter',give:{c:['letter']}}]},
+    {id:'slot2',x:6,y:6,l:'Unfinished letter',v:'paper',slot:2}]},
   conservatory:{name:'Conservatory',w:14,h:10,floor:'tile',dark:.5,glass:1,
    furn:[[2,2,4,2,'bed'],[8,2,4,2,'bed'],[2,6,4,2,'foxbed'],[8,6,4,1,'bench'],[11,8,1,1,'smalltable'],[12,1,1,1,'plant']],
    doors:[{x:0,y:5,to:'foyer',sx:14,sy:6}],lamps:[],windows:[],
    spots:[{id:'foxglove',x:4,y:6,l:'Foxglove bed',t:'foxglove',give:{c:['foxglove']}},
     {id:'mortar',x:9,y:6,l:'Potting bench',t:'mortar',give:{c:['mortar']}},
-    {id:'ivou',x:11,y:6,l:'Note',v:'paper',t:'ivou',give:{c:['viv1']}},
-    {id:'glog',x:11,y:8,l:'Watering log',v:'book',t:'glog',give:{c:['glog']}}]},
-  cellar:{name:'Hidden Cellar',w:14,h:10,floor:'stone',dark:.88,secret:1,enter:{d:['cellar'],o:['gate']},
+    {id:'slot3',x:11,y:6,l:'Note',v:'paper',slot:3},
+    {id:'glog',x:11,y:8,l:'Gardener\'s log',v:'book',t:'glog',give:{c:['glog']}}]},
+  cellar:{name:'Hidden Cellar',w:14,h:10,floor:'stone',dark:.88,secret:1,enter:{o:['gate']},
    furn:[[9,1,3,1,'cabinet'],[1,3,2,2,'desk'],[6,3,2,1,'table'],[11,5,2,2,'crate'],[1,7,1,1,'barrel']],
    doors:[{x:3,y:0,to:'library',sx:3,sy:2},{x:7,y:9,to:'boathouse',sx:7,sy:1,gate:1,lock:{f:'gateOpen',t:'gateLocked',o:'gate'}}],lamps:[[2,4,2.5],[7,4,2.2]],windows:[],
-   spots:[{id:'cabinet',x:10,y:1,l:'Filing cabinet',t:'dossiers',give:{c:['dossiers','viv2','pell2','voss2']}},
-    {id:'ledger',x:7,y:3,l:'Ledger',v:'book',t:'ledger',give:{c:['ledger']}},
-    {id:'cipher',x:2,y:3,l:'Coded note',v:'paper',pz:{ty:'cipher',plain:'THE ONE WHO HEALS ME MEANS TO KILL ME',ans:3,o:'cipher',f:'cipherDone',t:'cipherDone',title:'Edith\'s coded note',desc:'A note in Edith\'s hand, in code. A brass wheel beside it turns the letters back along the alphabet.',give:{c:['cipher']}}},
+   spots:[{id:'cabinet',x:10,y:1,l:'Filing cabinet',t:'dossiers',give:{c:['dossiers']}},
+    {id:'slot4',x:7,y:3,l:'Ledger',v:'book',slot:4},
+    {id:'cipher',x:2,y:3,l:'Coded note',v:'paper',pz:{ty:'cipher',ans:'$shift',o:'cipher',f:'cipherDone',t:'cipherDone',trait:1,title:'Edith\'s coded note',desc:'A note in Edith\'s hand, in code. A brass wheel beside it turns each letter back along the alphabet.'}},
     {id:'leverA',x:2,y:8,l:'Left lever',v:'lever',lever:1},{id:'leverB',x:11,y:8,l:'Right lever',v:'lever',lever:1}]},
   boathouse:{name:'Boathouse',w:14,h:10,floor:'planks',dark:.74,secret:1,
    furn:[[1,6,12,3,'water'],[6,5,2,4,'jetty'],[2,7,3,2,'boat'],[2,2,1,1,'crate'],[10,2,3,1,'table'],[6,2,3,2,'mud']],
    doors:[{x:7,y:0,to:'cellar',sx:7,sy:8}],lamps:[[11,3,3]],windows:[[13,4]],
-   spots:[{id:'bag',x:2,y:2,l:'Medical bag',v:'bag',t:'bag',give:{c:['vial']}},
-    {id:'boatlog',x:11,y:2,l:'Boat log',v:'book',t:'boatlog',give:{c:['boatlog'],f:['ready'],o:['accuse']}},
-    {id:'mud',x:7,y:3,l:'Footprints',t:'mud',give:{c:['mud']}}]}
+   spots:[{id:'gloves',x:2,y:2,l:'Gloves on the crate',v:'bag',t:'gloves',give:{c:['gloves']}},
+    {id:'boatlog',x:11,y:2,l:'Boat log',v:'book',t:'boatlog',give:{c:['boatlog']}},
+    {id:'stub',x:7,y:5,l:'Something on the jetty',trait:0,t:'stub',give:{d:['boat']}}]}
  },
  clues:{
-  motto:{t:'Edith\'s motto',s:'"Three steps back to the truth."'},
-  body:{t:'The body',s:'No wounds. Bluish lips, dilated pupils. Her heart simply stopped.'},
-  tea:{t:'Bitter tea',s:'Cold tea with a bitter, green smell.'},
-  clock:{t:'Stopped clock',s:'Knocked over as she fell. 11:47.'},
-  calendar:{t:'Calendar',s:'Nov 1: "Dr. C — tonic, 9:30." Nov 2 circled: "BOARD".',sus:'crane',k:'Visited her that night'},
-  diary:{t:'Edith\'s diary',s:'"They all owe me. Crane most of all." Papers hidden behind the poets.',sus:'crane',k:'Owed Edith the most'},
+  motto:{t:'Edith\'s motto',s:'"{Steps} steps back to the truth."'},
+  body:{t:'The body',s:'No wounds. Bluish lips, dilated pupils. Her heart stopped.'},
+  tea:{t:'Bitter tea',s:'Cold tea with a bitter, green smell. Poisoned.'},
+  clock:{t:'Stopped clock',s:'Knocked over as she fell. It stopped at {clock}.'},
+  calendar:{t:'Calendar',s:'"Visitor, 9:30." The name has been torn away.'},
+  diary:{t:'Edith\'s diary',s:'"My papers sleep behind the poets: {books}."'},
   poisonbook:{t:'Book of poisons',s:'Foxglove slows the heart until it stops, hours after the dose.'},
-  letter:{t:'Unfinished letter',s:'"Silas, you had your chance to pay."',sus:'crane',k:'Refused to pay her'},
-  voss1:{t:'Letter from Voss',s:'"Drop the audit, Edith, or you\'ll be sorry."',sus:'voss',k:'Threatened her'},
-  pell1:{t:'Letter to Pell',s:'Edith refused to name Margaret in her will.',sus:'pell',k:'Bitter about the will'},
-  viv1:{t:'Vivian\'s IOU',s:'Vivian owes Edith £2,000 in gambling debts.',sus:'vivian',k:'Owed her money'},
   foxglove:{t:'Cut foxgloves',s:'Stems cut in the last day or two.'},
-  mortar:{t:'Mortar & gloves',s:'Green residue and thin surgical gloves.'},
-  glog:{t:'Watering log',s:'Oct 31: "Dr. Crane asked for foxgloves, for a tincture."',sus:'crane',k:'Asked for foxgloves'},
-  dossiers:{t:'Edith\'s files',s:'Edith was blackmailing all four. Crane\'s file: he killed her husband with a drunken overdose.',sus:'crane',k:'Edith could ruin him'},
-  viv2:{t:'Edith\'s will',s:'Everything goes to charity. Vivian gains nothing from her death.',sus:'vivian',k:'Gains nothing'},
-  pell2:{t:'Pell\'s alibi',s:'Margaret served Voss brandy in the billiard room until midnight.',sus:'pell',k:'Alibi until midnight'},
-  voss2:{t:'Voss\'s alibi',s:'Voss never left the billiard room. Pell confirms it.',sus:'voss',k:'Alibi until midnight'},
-  ledger:{t:'Blackmail ledger',s:'Crane stopped paying in October. "Then the Board shall have it."',sus:'crane',k:'About to be exposed'},
-  cipher:{t:'Edith\'s cipher',s:'"THE ONE WHO HEALS ME MEANS TO KILL ME."',sus:'crane',k:'Edith feared her doctor'},
-  vial:{t:'Empty vial',s:'Crane\'s bag: an empty vial, "Tinct. Digitalis — S.C."',sus:'crane',k:'Had the poison'},
-  boatlog:{t:'Boat log',s:'"Nov 2, 12:40 AM — S. Crane." He came back after she died.',sus:'crane',k:'Returned secretly'},
-  mud:{t:'Footprints',s:'Fresh prints from the jetty to the tunnel.'}
+  mortar:{t:'Mortar',s:'Green residue. Someone made a foxglove tincture here.'},
+  glog:{t:'Gardener\'s log',s:'"Oct 31: foxgloves cut. I never saw who. Everyone has a key."'},
+  dossiers:{t:'Edith\'s files',s:'Edith kept a file on everyone she knew, and used them.'},
+  gloves:{t:'Gardening gloves',s:'Stained green. Worn by whoever made the poison.'},
+  boatlog:{t:'Boat log',s:'"Nov 2, 12:40 AM." The name has been scratched out.'}
  },
  text:{
-  intro:{t:'Telegram · Blackmoor Constabulary',p:['DETECTIVES. EDITH HARROW, 68, CLOCKMAKER, FOUND DEAD IN HER LOCKED STUDY. NO WOUND. CORONER BAFFLED.','THE HOUSE IS YOURS UNTIL DAWN. SEARCH IT, FOLLOW THE EVIDENCE, AND NAME THE KILLER AT THE CASE BOARD IN THE FOYER. — INSPECTOR ROURKE']},
-  telegram:{t:'Inspector\'s note',p:['"Four people visited Edith this week: her doctor, her niece, her business partner and her housekeeper. They\'ve all gone home. Find out which one did it."']},
-  portrait:{t:'Portrait',p:['Edith Harrow beside her late husband, who died eight years ago. A brass plaque reads: "Three steps back to the truth."']},
-  pellNote:{t:'Letter',p:['A copy of Edith\'s reply to Margaret Pell: "You have served me well, Margaret, but you will not be named in my will. Do not ask again."']},
-  coat:{t:'Coat rack',p:['Edith\'s overcoat, still damp from the rain. In the pocket is a small iron key tagged CONSERVATORY. You take it.']},
+  intro:{t:'Telegram · Blackmoor Constabulary',p:['DETECTIVES. EDITH HARROW, 68, CLOCKMAKER, FOUND DEAD IN HER LOCKED STUDY. NO WOUND. CORONER BAFFLED.','FIVE PEOPLE HAD REASON TO HATE HER. SEARCH THE HOUSE, SOLVE WHAT SHE HID, AND NAME THE KILLER AT THE CASE BOARD IN THE FOYER. — INSPECTOR ROURKE']},
+  telegram:{t:'Inspector\'s note',p:['"Five suspects, and every one of them had a motive. Motive won\'t settle this. Find the physical evidence and match it to the police files. Follow every lead before you name anyone."']},
+  portrait:{t:'Portrait',p:['Edith Harrow beside her late husband. A brass plaque reads: "{Steps} steps back to the truth."']},
+  coat:{t:'Coat rack',p:['Edith\'s overcoat, still damp. In the pocket is a small iron key tagged CONSERVATORY. You take it.']},
   coat2:{t:'Coat rack',p:['The pockets are empty now.']},
   consLocked:{t:'Conservatory door',p:['Locked. Edith kept her keys close. Search the house for this one.']},
-  body:{t:'Edith Harrow',p:['Edith lies before the hearth, as the police found her. No wounds, no bruises. Her lips are bluish and her pupils wide.','Her heart stopped, but hearts don\'t stop on their own in locked rooms.']},
-  clock:{t:'Mantel clock',p:['One of Edith\'s own clocks, knocked crooked as if she grabbed the mantel as she fell. The hands stopped at 11:47.']},
+  body:{t:'Edith Harrow',p:['Edith lies before the hearth as the police found her. No wounds or bruises, but her lips are bluish and her pupils wide.','Her heart stopped, but hearts don\'t stop on their own in locked rooms.']},
+  clock:{t:'Mantel clock',p:['One of Edith\'s own clocks, knocked crooked as she grabbed the mantel and fell. The hands stopped at {clock}.']},
   tea:{t:'Teacup',p:['Cold tea, half drunk. It smells bitter, with a faint green, leafy note.']},
-  vossLetter:{t:'Letter',p:['From Julian Voss: "Drop the audit, Edith, or you\'ll be sorry you ever made me your partner."']},
-  calendar:{t:'Calendar',p:['Under November 1: "Dr. C — tonic, 9:30." November 2 is circled in red: BOARD.']},
-  safeOpen:{t:'Wall safe',p:['11:47. The dial clicks and the door swings open.','Inside is Edith\'s diary. The last page reads: "They all owe me, and they all hate me for it. Crane most of all."','"My papers sleep behind the poets. Rust, then Sea, then Moss, then Gold."']},
-  safeDone:{t:'Wall safe',p:['Empty now. You have the diary.']},
-  poisonbook:{t:'Lectern',p:['Poisons of the English Garden, open at the foxglove: "In excess it slows the heart, then stops it, some hours after the dose. The victim appears to die of heart failure."']},
-  letter:{t:'Unfinished letter',p:['In Edith\'s hand: "Silas, you had your chance to pay. Tomorrow the Board will know what you did."']},
-  shelfOpen:{t:'The poets\' shelf',p:['Rust, Sea, Moss, Gold. Something clicks inside the wall.','A section of shelving swings inward to the left. Stone steps lead down into the dark.']},
-  shelfDone:{t:'The poets\' shelf',p:['The secret passage stays open beside the shelf.']},
+  calendar:{t:'Calendar',p:['Under November 1: "Visitor, 9:30." Someone has torn the name away.']},
+  safeOpen:{t:'Wall safe',p:['The dial clicks and the door swings open.','Inside is Edith\'s diary: "My papers sleep behind the poets: {books}."','Under the diary is an unsigned note: "Pay me back, or you will be next." It is written in {t3} ink. Check the police files.']},
+  safeDone:{t:'Wall safe',p:['Empty now. You have the diary and the note.']},
+  poisonbook:{t:'Lectern',p:['Poisons of the English Garden, open at the foxglove: "In excess it slows the heart, then stops it, some hours after the dose."']},
+  shelfOpen:{t:'The poets\' shelf',p:['With the last pull, something clicks inside the wall. A section of shelving swings inward. Stone steps lead down into the dark.','In the dust of the steps are fresh footprints: {t2}. Someone has been down here recently.']},
+  shelfDone:{t:'The poets\' shelf',p:['The passage stays open. The prints on the steps were made by {t2}.']},
   foxglove:{t:'Foxglove bed',p:['Tall purple foxgloves. Several stems have been cut cleanly near the base. The sap is still wet.']},
-  mortar:{t:'Potting bench',p:['A stone mortar with green residue in the grooves, and a pair of thin surgical gloves. No gardener wears those.']},
-  ivou:{t:'Note',p:['An IOU: "I, Vivian Harrow, owe my aunt £2,000." Underneath, in Edith\'s hand: "Due by Christmas. No excuses."']},
-  glog:{t:'Watering log',p:['"Oct 31 — Dr. Crane asked for some foxgloves. Said he wanted to make a tincture for Mrs. H\'s heart."']},
-  dossiers:{t:'Filing cabinet',p:['Four thick files. Edith Harrow, respected clockmaker, was a blackmailer.','VIVIAN: gambling debts. VOSS: money skimmed from the firm. PELL: proof she is Edith\'s half-sister.','CRANE: a nurse\'s sworn statement. Eight years ago Dr. Crane, drunk, gave Edith\'s husband a fatal overdose.','Clipped to the back, a copy of Edith\'s will (all to charity) and a note: "Voss and Pell in the billiard room until midnight, as usual."']},
-  ledger:{t:'Ledger',p:['Payments from all four, month by month. Crane\'s stop in October. Beside them Edith wrote: "He refuses. Then the Board shall have it."']},
-  cipherDone:{t:'Edith\'s coded note',p:['THE ONE WHO HEALS ME MEANS TO KILL ME.','Edith suspected her own doctor.']},
+  mortar:{t:'Potting bench',p:['A stone mortar with green residue in its grooves. Someone made a tincture here.']},
+  glog:{t:'Gardener\'s log',p:['"Oct 31 — foxgloves cut in the night. I never saw who. Half the village has a key to this place."']},
+  dossiers:{t:'Filing cabinet',p:['Files on every person Edith knew, thick with letters, receipts and secrets. Edith Harrow was a blackmailer.','Any of the suspects could have wanted her dead.']},
+  cipherDone:{t:'Edith\'s coded note',p:['{cipher}.','Edith knew one thing about the person she feared: they are {t1}-handed.']},
   gateLocked:{t:'Iron gate',p:['A heavy gate chained to two levers on either side of the cellar. They spring back after a few seconds. Both must be down at once.']},
-  bag:{t:'Medical bag',p:['A doctor\'s bag monogrammed S.C. Inside: an empty vial labelled "Tinct. Digitalis — S.C. Dispensary".']},
-  boatlog:{t:'Boat log',p:['The newest line, smudged by wet fingers: "Nov 2, 12:40 AM — S. Crane."','He rowed back an hour after Edith died. You have enough to name the killer. Head back to the case board in the foyer.']},
-  mud:{t:'Footprints',p:['Muddy prints from the jetty to the tunnel. Narrow city shoes.']}
- },
- ending:['Dr. Silas Crane killed Edith Harrow.','For eight years Edith blackmailed him over her husband\'s death. When he stopped paying, she vowed to send his file to the Medical Board.','On Oct 31 he took foxgloves from her conservatory and made a digitalis tincture. At 9:30 he added it to her tea and left. The poison worked slowly. At 11:47, alone in her locked study, her heart stopped.','At 12:40 he rowed back to steal his file, but he never solved the poets\' shelf. You did.'],
- wrong:'The Inspector shakes his head. "That doesn\'t fit the evidence. Look again at who had the means and the chance."'
+  gloves:{t:'Gloves on the crate',p:['A pair of gardening gloves, stained green with foxglove sap. No name in them.']},
+  boatlog:{t:'Boat log',p:['The newest line, smudged by wet fingers: "Nov 2, 12:40 AM". The name has been scratched out with a knife.']},
+  stub:{t:'On the jetty',p:['A {t0} stub ground into the planks, barely damp. Whoever rowed out last night smokes.']}
+ }
 };
 
 /* ---------------------------------------------------------------- 2 */
 CASES.lighthouse={
  title:'The Keeper of Gull Rock',sub:'A lighthouse keeper at the foot of her own tower.',diff:'Medium',
- victim:'Mara Quill',killer:'royce',start:{room:'cottage',x:7,y:6,d:-Math.PI/2},startObj:['scene'],
+ victim:'Mara Quill',start:{room:'cottage',x:7,y:6,d:-Math.PI/2},startObj:['scene'],
  items:{storeKey:'Storeroom key',caveKey:'Brass trapdoor key'},
- suspects:{royce:{n:'Captain Elias Royce',r:'Skipper of the Kestrel'},owen:{n:'Owen Pike',r:'Local fisherman'},agnes:{n:'Agnes Bell',r:'Mara\'s cousin'}},
+ traits:[
+  {l:'Oilskin',vals:['yellow','black','green'],f:'Fibres caught on the hatch hinge: {v} oilskin.',p:'wears a {v} oilskin'},
+  {l:'Footwear',vals:['hobnailed boots','rubber boots','leather shoes'],f:'Mara heard {v} on the tower steps at night.',p:'wears {v}'},
+  {...HAND,f:'In Mara\'s photograph, the figure holds the lamp in the {v} hand.'},
+  {l:'Knot',vals:['bowline','clove hitch','reef knot'],f:'The lamp drawer was tied shut with a {v}.',p:'ties a {v}'}],
+ setup(r){const freq=String(300+r(500)),cols=['Red','Green','White','Amber'],sig=[r(4),r(4),r(4)],day=1+r(28);
+  return{v:{freq,signal:sig.map(i=>cols[i].toLowerCase()).join(', '),dayN:String(day)},ans:{freq,signal:sig,box:'11'+String(day).padStart(2,'0')}}},
+ pool:{
+  royce:{n:'Captain Elias Royce',r:'Skipper of the Kestrel',k:'Mara reported his smuggling',doc:'A note left under the door: "Report the Kestrel to Customs again, keeper, and you\'ll answer for it. — E.R."',story:'Mara had reported his smuggling runs to Customs.'},
+  owen:{n:'Owen Pike',r:'Local fisherman',k:'Blamed her for his brother\'s death',doc:'"My brother drowned the night your light went dark, Mara. Let it happen again and I\'ll put you out myself. — O.P."',story:'He blamed her for the night the light failed and his brother drowned.'},
+  agnes:{n:'Agnes Bell',r:'Mara\'s cousin',k:'Wanted the rock',doc:'From Agnes Bell: "Sell me the rock, Mara. Grandfather meant it for me. You\'ll regret it if you don\'t."',story:'She wanted Gull Rock, and Mara would never sell.'},
+  hale:{n:'Father Tom Hale',r:'Parish priest',k:'Mara caught him stealing',doc:'Mara\'s draft to the Bishop: "I have seen Father Hale take money from the lifeboat collection three Sundays running."',story:'Mara was about to tell the Bishop he had been stealing the lifeboat collection.'},
+  nell:{n:'Nell Garrow',r:'Assistant keeper',k:'Wanted the keeper\'s post',doc:'A Trinity House letter: "Miss Garrow\'s application for keeper is refused while Mrs. Quill holds the post." Nell has underlined "while".',story:'She would only become keeper once Mara was gone.'},
+  penhale:{n:'Dr. Ivo Penhale',r:'Island doctor',k:'Mara blamed him for her husband',doc:'Mara\'s letter to the Medical Council: "Dr. Penhale was drunk the night my husband died. I will testify."',story:'Mara was going to testify that he was drunk the night her husband died.'},
+  trent:{n:'Silas Trent',r:'Harbourmaster',k:'Taking bribes',doc:'A page from Mara\'s notebook: "Trent waved the Kestrel through again. That\'s five times. He\'s being paid."',story:'Mara had proof he was taking bribes to let smugglers through.'}},
  obj:{scene:'Examine Mara\'s body in the tower',store:'Unlock the storeroom',hatch:'Open the padlock on the tower hatch',radio:'Tune Mara\'s radio to the right frequency',
-  signal:'Recreate the signal in the lamp room',cave:'Find out what\'s under the storeroom trapdoor',box:'Open the strongbox in the sea cave',accuse:'Name the killer at the case board in the cottage'},
+  signal:'Recreate Mara\'s signal in the lamp room',cave:'Find out what\'s under the storeroom trapdoor',box:'Open the lockbox in the sea cave',accuse:'Name the killer at the case board in the cottage'},
  rooms:{
   cottage:{name:'Keeper\'s Cottage',w:14,h:10,floor:'wood',dark:.72,
    furn:[[5,4,3,2,'table'],[1,1,2,1,'box',{c:0x2a2a2e,h:.9}],[10,1,3,2,'bunk'],[1,6,1,2,'shelfv'],[9,8,3,1,'board'],[4,3,1,1,'chair']],
    doors:[{x:13,y:5,to:'tower',sx:1,sy:6},{x:6,y:0,to:'radio',sx:5,sy:6},{x:6,y:9,to:'store',sx:6,sy:1,lock:{i:'storeKey',t:'storeLocked',o:'store'}}],
    lamps:[[6,5,3]],windows:[[3,0],[10,0]],
    spots:[{id:'board',x:10,y:8,l:'Case board',board:1},
-    {id:'owennote',x:6,y:4,l:'Note',v:'paper',t:'owenNote',give:{c:['owen1']}},
+    {id:'slot0',x:6,y:4,l:'Note',v:'paper',slot:0},
     {id:'hooks',x:1,y:4,l:'Key hooks',v:'panel',vo:{c:0x5a3a22},t:'hooks'},
     {id:'diary',x:11,y:3,l:'Mara\'s diary',v:'book',t:'diary',give:{c:['diary']}}]},
   tower:{name:'Tower Base',w:12,h:12,floor:'stone',dark:.82,
@@ -226,82 +240,87 @@ CASES.lighthouse={
    doors:[{x:0,y:6,to:'cottage',sx:12,sy:5},{x:6,y:0,to:'lamp',sx:5,sy:8,lock:{f:'hatchOpen',t:'hatchLocked',o:'hatch'}}],
    lamps:[[3,4,2.5]],windows:[[11,4]],
    spots:[{id:'body',x:3,y:8,l:'Mara Quill',v:'body',vo:{c:0x2a3a4a},t:'body',give:{c:['body'],i:['storeKey'],d:['scene']}},
-    {id:'padlock',x:7,y:1,l:'Hatch padlock',v:'panel',vo:{c:0x6a6a72},pz:{ty:'word',n:4,ans:'TIDE',o:'hatch',f:'hatchOpen',t:'hatchOpen',after:'hatchDone',title:'Hatch padlock',desc:'Four letter wheels. Mara chose the word.'}},
+    {id:'padlock',x:7,y:1,l:'Hatch padlock',v:'panel',vo:{c:0x6a6a72},pz:{ty:'word',n:4,ans:'TIDE',o:'hatch',f:'hatchOpen',t:'hatchOpen',after:'hatchDone',trait:0,title:'Hatch padlock',desc:'Four letter wheels. Mara chose the word.'}},
     {id:'oilcan',x:9,y:1,l:'Crates',t:'oil'}]},
   radio:{name:'Radio Room',w:10,h:8,floor:'wood2',dark:.78,
    furn:[[3,1,4,1,'desk'],[1,5,1,1,'smalltable'],[8,1,1,2,'shelfv']],
    doors:[{x:5,y:7,to:'cottage',sx:6,sy:1}],lamps:[[5,3,2.5]],windows:[[0,3]],
-   spots:[{id:'radio',x:5,y:1,l:'Radio set',v:'radio',pz:{ty:'code',n:3,ans:'417',o:'radio',f:'radioDone',t:'radioDone',after:'radioAgain',title:'Radio set',desc:'Three dials set the frequency in kilocycles. Who was Mara talking to?',give:{c:['radio'],o:['signal']}}},
-    {id:'siglog',x:1,y:5,l:'Signal log',v:'book',t:'sigLog',give:{c:['siglog','agnes2']}}]},
+   spots:[{id:'radio',x:5,y:1,l:'Radio set',v:'radio',pz:{ty:'code',n:3,ans:'$freq',o:'radio',f:'radioDone',t:'radioDone',after:'radioAgain',trait:1,title:'Radio set',desc:'Three dials set the frequency. Who was Mara talking to?',give:{o:['signal']}}},
+    {id:'slot1',x:3,y:1,l:'Papers on the desk',v:'paper',slot:1},
+    {id:'siglog',x:1,y:5,l:'Signal log',v:'book',t:'sigLog',give:{c:['siglog']}}]},
   store:{name:'Storeroom',w:12,h:8,floor:'planks',dark:.8,
    furn:[[1,1,2,1,'crate'],[8,1,3,1,'shelf'],[4,4,2,1,'crate'],[1,5,1,1,'barrel'],[10,5,1,1,'barrel']],
    doors:[{x:6,y:0,to:'cottage',sx:6,sy:8},{x:6,y:7,to:'cave',sx:6,sy:1,lock:{i:'caveKey',t:'trapLocked',o:'cave'}}],lamps:[[6,3,2.5]],windows:[],
    spots:[{id:'tides',x:2,y:1,l:'Tide table',v:'paper',t:'tides',give:{c:['tides']}},
     {id:'customs',x:9,y:1,l:'Card on the shelf',v:'paper',vo:{h:1.2},t:'customs',give:{c:['customs']}},
-    {id:'agnes',x:5,y:4,l:'Letter',v:'paper',vo:{h:.92},t:'agnes',give:{c:['agnes1']}}]},
+    {id:'slot2',x:5,y:4,l:'Letter',v:'paper',vo:{h:.92},slot:2}]},
   lamp:{name:'Lamp Room',w:10,h:10,floor:'tile',dark:.55,glass:1,
    furn:[[4,4,2,2,'lens'],[1,1,2,1,'table'],[8,1,1,1,'box',{c:0x2a2a2e,h:1.1}]],
    doors:[{x:5,y:9,to:'tower',sx:6,sy:1}],lamps:[],windows:[],
-   spots:[{id:'filters',x:2,y:1,l:'Colour filters',v:'none',pz:{ty:'order',items:[{n:'Red',c:'#b8322a'},{n:'Green',c:'#2f8a3a'},{n:'White',c:'#e8e4da'},{n:'Amber',c:'#d08a2a'}],n:3,ans:[1,1,0],o:'signal',f:'signalDone',t:'signalDone',after:'signalAgain',title:'The great lamp',desc:'Coloured glass filters slide in front of the lamp, one flash at a time. Three flashes make a signal.',give:{i:['caveKey'],o:['cave']}}},
-    {id:'scope',x:8,y:1,l:'Telescope',v:'scope',t:'scope',give:{c:['owen2']}}]},
+   spots:[{id:'filters',x:2,y:1,l:'Colour filters',pz:{ty:'order',items:[{n:'Red',c:'#b8322a'},{n:'Green',c:'#2f8a3a'},{n:'White',c:'#e8e4da'},{n:'Amber',c:'#d08a2a'}],ans:'$signal',o:'signal',f:'signalDone',t:'signalDone',after:'signalAgain',trait:3,title:'The great lamp',desc:'Coloured filters slide in front of the lamp, one flash at a time. Three flashes make a signal.',give:{i:['caveKey'],o:['cave']}}},
+    {id:'slot3',x:1,y:1,l:'Letter',v:'paper',slot:3},
+    {id:'scope',x:8,y:1,l:'Telescope',v:'scope',t:'scope'}]},
   cave:{name:'Sea Cave',w:12,h:10,floor:'stone',dark:.86,secret:1,enter:{d:['cave'],o:['box']},
    furn:[[1,6,10,3,'water'],[7,7,3,2,'boat'],[1,1,2,2,'crate'],[9,1,2,1,'crate'],[4,3,1,1,'barrel']],
    doors:[{x:6,y:0,to:'store',sx:6,sy:6}],lamps:[[6,3,2.5]],windows:[],
    spots:[{id:'contraband',x:2,y:2,l:'Crates',t:'contraband',give:{c:['contraband']}},
-    {id:'strongbox',x:9,y:1,l:'Strongbox',v:'chest',pz:{ty:'code',n:4,ans:'1103',o:'box',f:'boxOpen',t:'boxOpen',after:'boxDone',title:'Strongbox',desc:'A sea captain\'s strongbox. Scratched on the lid: "the day she talked".',give:{c:['orders'],f:['ready'],o:['accuse']}}},
-    {id:'cap',x:5,y:4,l:'Something on the rocks',t:'cap',give:{c:['cap']}}]}
+    {id:'strongbox',x:9,y:1,l:'Lockbox',v:'chest',pz:{ty:'code',n:4,ans:'$box',o:'box',f:'boxOpen',t:'boxOpen',after:'boxDone',trait:2,title:'Mara\'s lockbox',desc:'Scratched on the lid: "The day I called Customs (month, day)."'}},
+    {id:'slot4',x:5,y:4,l:'Papers on the rocks',slot:4}]}
  },
  clues:{
-  body:{t:'Mara\'s body',s:'A blow to the back of the head. She didn\'t fall. She was struck.'},
-  owen1:{t:'Owen\'s note',s:'"Keep that light burning or I\'ll put you out myself."',sus:'owen',k:'Threatened her'},
-  diary:{t:'Mara\'s diary',s:'"Padlock word: what the moon pulls." Royce\'s boat comes and goes at night.',sus:'royce',k:'Mara was watching his boat'},
+  body:{t:'Mara\'s body',s:'Struck on the back of the head. She didn\'t fall.'},
+  diary:{t:'Mara\'s diary',s:'"Padlock word: what the moon pulls." "Someone climbs the steps at night."'},
   tides:{t:'Tide table',s:'"The moon pulls the TIDE twice a day."'},
-  customs:{t:'Customs card',s:'"Coastguard & Customs — 417 kc."'},
-  agnes1:{t:'Agnes\'s letter',s:'"Sell me the rock, Mara. You\'ll regret it if you don\'t."',sus:'agnes',k:'Wanted the land'},
-  radio:{t:'Radio log',s:'Mara reported the Kestrel to Customs on Nov 3.',sus:'royce',k:'Mara reported him'},
-  siglog:{t:'Signal log',s:'"Kestrel signals: green, green, red. Smuggling?"',sus:'royce',k:'Smuggling signals'},
-  owen2:{t:'Owen\'s alibi',s:'Through the telescope: Owen\'s boat moored, lamp lit, all night.',sus:'owen',k:'Seen at the harbour'},
-  agnes2:{t:'Agnes\'s alibi',s:'Agnes was on the mainland ferry that evening.',sus:'agnes',k:'On the ferry'},
-  contraband:{t:'Contraband',s:'Crates of untaxed brandy marked KESTREL.',sus:'royce',k:'Smuggler'},
-  cap:{t:'Captain\'s cap',s:'A skipper\'s cap with Royce\'s name, spattered with blood.',sus:'royce',k:'Blood on his cap'},
-  orders:{t:'Royce\'s note',s:'"She\'s reported us. I\'ll deal with the keeper tonight."',sus:'royce',k:'Planned to silence her'}
+  customs:{t:'Customs card',s:'"Coastguard & Customs — {freq} kc."'},
+  siglog:{t:'Signal log',s:'"My drawer signal: {signal}."'},
+  contraband:{t:'Contraband',s:'Untaxed brandy. Half the island knows this cave.'}
  },
  text:{
-  intro:{t:'Telegram · Port Ellery Police',p:['DETECTIVES. MARA QUILL, 41, KEEPER OF GULL ROCK LIGHTHOUSE, FOUND AT THE FOOT OF THE TOWER STAIRS. THE LIGHT WENT DARK LAST NIGHT.','LOCALS SAY SHE FELL. I DON\'T BELIEVE IT. SEARCH THE ROCK AND NAME THE KILLER AT THE CASE BOARD IN HER COTTAGE. — SERGEANT TREW']},
-  owenNote:{t:'Note',p:['Pinned under the teapot: "Keep that light burning, Mara. My brother drowned the last time it went dark. Let it happen again and I\'ll put you out myself. — O.P."']},
+  intro:{t:'Telegram · Port Ellery Police',p:['DETECTIVES. MARA QUILL, 41, KEEPER OF GULL ROCK, FOUND AT THE FOOT OF THE TOWER STAIRS. THE LIGHT WENT DARK LAST NIGHT.','SHE HAD ENEMIES ALL OVER THE ISLAND. FOLLOW EVERY LEAD AND NAME THE KILLER AT THE CASE BOARD IN HER COTTAGE. — SERGEANT TREW']},
   hooks:{t:'Key hooks',p:['A row of brass hooks. The one labelled STOREROOM is empty. Mara must have had it with her.']},
-  diary:{t:'Mara\'s diary',p:['"The Kestrel again tonight, no lights, heading for the cave. Captain Royce is up to something."','On the inside cover: "Padlock word: what the moon pulls."']},
+  diary:{t:'Mara\'s diary',p:['"Someone has been climbing the tower steps at night. I hear them, but by the time I look, they\'re gone."','On the inside cover: "Padlock word: what the moon pulls."']},
   storeLocked:{t:'Storeroom door',p:['Locked. The key hook by the stove is empty.']},
   body:{t:'Mara Quill',p:['Mara lies at the foot of the spiral stair. There is a deep wound on the back of her head, but her hands are clean. She never tried to break a fall.','She was struck from behind. Clutched in her fist is the storeroom key. You take it.']},
   hatchLocked:{t:'Tower hatch',p:['The hatch to the lamp room is padlocked. The lock is on the wall beside it.']},
-  hatchOpen:{t:'Hatch padlock',p:['T-I-D-E. The padlock drops open. The way up to the lamp room is clear.']},
-  hatchDone:{t:'Hatch padlock',p:['The padlock hangs open.']},
-  oil:{t:'Crates',p:['Lamp oil, wicks and spare glass. Everything a keeper needs.']},
-  radioDone:{t:'Radio set',p:['417 kilocycles. A recorded message crackles from the set, Mara\'s own voice:','"Gull Rock to Customs, November 3. The Kestrel is running contraband into the sea cave. She signals green, green, red from offshore."']},
-  radioAgain:{t:'Radio set',p:['Only static now.']},
-  sigLog:{t:'Signal log',p:['Mara\'s notes on passing ships. The last page: "Kestrel signals from offshore: green, green, red. Answering lamp opens the cave route?"','Below that: "Agnes on the 6 o\'clock ferry to the mainland again. Good riddance."'],},
+  hatchOpen:{t:'Hatch padlock',p:['T-I-D-E. The padlock drops open.','Caught on the hatch hinge are a few fibres of {t0} oilskin. Somebody squeezed through here in a hurry.']},
+  hatchDone:{t:'Hatch padlock',p:['The padlock hangs open. The fibres on the hinge are {t0} oilskin.']},
+  oil:{t:'Crates',p:['Lamp oil, wicks and spare glass.']},
+  radioDone:{t:'Radio set',p:['A recording crackles from the set, Mara\'s own voice: "Gull Rock to Customs, November {dayN}. I\'ve had threats from more than one person."','"And someone is climbing my tower at night. I keep hearing {t1} on the steps."']},
+  radioAgain:{t:'Radio set',p:['Only static now. Mara heard {t1} on the steps.']},
+  sigLog:{t:'Signal log',p:['Mara\'s notes on passing ships. On the last page: "My drawer signal, in case I forget: {signal}."']},
   tides:{t:'Tide table',p:['A tide chart. In the margin, in Mara\'s hand: "The moon pulls the TIDE twice a day."']},
-  customs:{t:'Card on the shelf',p:['A printed card: "H.M. Coastguard & Customs — radio watch on 417 kilocycles."']},
-  agnes:{t:'Letter',p:['From Agnes Bell: "Sell me the rock, Mara. Grandfather meant it for me. You\'ll regret it if you don\'t."']},
+  customs:{t:'Card on the shelf',p:['A printed card: "H.M. Coastguard & Customs — radio watch on {freq} kilocycles."']},
   trapLocked:{t:'Trapdoor',p:['A brass-bound trapdoor in the floor, locked tight. Sea air whistles through the cracks.']},
-  signalDone:{t:'The great lamp',p:['Green, green, red. The lamp flashes the Kestrel\'s signal out over the dark water.','As the lens turns, a drawer in its base clicks open. Inside is a brass key stamped TRAPDOOR. You take it.']},
-  signalAgain:{t:'The great lamp',p:['The lamp turns slowly. The drawer in its base is empty.']},
-  scope:{t:'Telescope',p:['Mara\'s telescope points at the harbour. Pinned beside it, her note from last night: "Owen\'s boat moored, lamp lit, 8 PM to dawn. He keeps watch on me as much as I do on him."']},
-  contraband:{t:'Crates',p:['Untaxed brandy and tobacco, every crate stencilled KESTREL.']},
-  boxOpen:{t:'Strongbox',p:['1-1-0-3. November 3, the day Mara called Customs. The lid springs open.','Inside, a note in a rough hand: "She\'s reported us. I\'ll deal with the keeper tonight. — E.R." You have enough. Return to the case board.']},
-  boxDone:{t:'Strongbox',p:['Empty now.']},
-  cap:{t:'On the rocks',p:['A skipper\'s cap, stitched E. ROYCE inside the band. The brim is spattered with dried blood.']}
- },
- ending:['Captain Elias Royce killed Mara Quill.','Mara had been watching the Kestrel run contraband into the sea cave, and on November 3 she reported it to Customs.','Last night Royce rowed in through the cave, climbed to the tower, and struck her from behind on the stairs. He put out the light so his boat could leave unseen.','He dropped his cap on the rocks and left his orders in his own strongbox. Sergeant Trew arrests him at the harbour at dawn.'],
- wrong:'Sergeant Trew frowns. "The evidence doesn\'t point there. Who had a reason to silence her, and a way onto the rock?"'
+  signalDone:{t:'The great lamp',p:['The lamp flashes Mara\'s signal out over the water. A drawer in its base clicks open, but it had been tied shut with a {t3}. Someone already searched it.','Inside is a brass key stamped TRAPDOOR. You take it.']},
+  signalAgain:{t:'The great lamp',p:['The drawer is empty. It had been tied shut with a {t3}.']},
+  scope:{t:'Telescope',p:['Mara\'s telescope points at the harbour. Through it you can see half the island\'s boats.']},
+  contraband:{t:'Crates',p:['Untaxed brandy and tobacco. Anyone on the island with a boat could have used this cave.']},
+  boxOpen:{t:'Mara\'s lockbox',p:['The lockbox springs open. Inside is a single photograph Mara took from the gallery last week.','A figure on the stairs, face hidden, holding a lamp in the {t2} hand.']},
+  boxDone:{t:'Mara\'s lockbox',p:['In the photograph the figure holds the lamp in the {t2} hand.']}
+ }
 };
 
 /* ---------------------------------------------------------------- 3 */
 CASES.gallery={
- title:'Blackout at the Varga Gallery',sub:'An art dealer dead in the dark, after hours.',diff:'Medium',
- victim:'Celeste Varga',killer:'lionel',start:{room:'hall',x:8,y:9,d:-Math.PI/2},startObj:['scene','power'],
+ title:'Blackout at the Varga Gallery',sub:'An art dealer dead in the dark, after hours.',diff:'Hard',
+ victim:'Celeste Varga',start:{room:'hall',x:8,y:9,d:-Math.PI/2},startObj:['scene','power'],
  items:{},
- suspects:{lionel:{n:'Lionel Marsh',r:'Painting restorer'},ines:{n:'Ines Duarte',r:'Painter'},theo:{n:'Theo Varga',r:'Celeste\'s son'},ruth:{n:'Ruth Abel',r:'Night guard'}},
+ traits:[
+  {l:'Scent',vals:['sandalwood','lavender','bay rum'],f:'The fuse box reeks of {v}.',p:'wears {v}'},
+  {...HAND,f:'Smudges on the keypad show it was pressed with the {v} hand.'},
+  {l:'Hair',vals:['grey','black','red'],f:'A {v} hair is caught on the bloodied bust.',p:'has {v} hair'},
+  {l:'Footwear',vals:['high heels','brogues','rubber soles'],f:'The camera shows the visitor walking in {v}.',p:'wears {v}'}],
+ setup(r){const year=1950+r(30);let fuse;do{fuse=[r(2),r(2),r(2),r(2),r(2)]}while(fuse.every(x=>x===fuse[0]));
+  const ys=r.pick([...Array(50)].map((_,i)=>1900+i),4);const ord=[0,1,2,3].sort((a,b)=>ys[a]-ys[b]);
+  return{v:{year:String(year),fuseText:fuse.map(b=>b?'UP':'DOWN').join(', '),y0:ys[0],y1:ys[1],y2:ys[2],y3:ys[3]},ans:{year:String(year),fuse,order:ord}}},
+ pool:{
+  lionel:{n:'Lionel Marsh',r:'Painting restorer',k:'Celeste found his forgeries',doc:'Celeste\'s draft to the police: "I have proof that Lionel Marsh has been selling forgeries through my gallery."',story:'Celeste had discovered he was selling forgeries through her gallery.'},
+  ines:{n:'Ines Duarte',r:'Painter',k:'Celeste sold her work as someone else\'s',doc:'Ines Duarte\'s sketchbook: "Celeste sold my best work under another name. I\'ll never forgive her."',story:'Celeste had sold Ines\'s paintings under another artist\'s name.'},
+  theo:{n:'Theo Varga',r:'Celeste\'s son',k:'Wanted his inheritance',doc:'From Theo: "Give me my share now, Mother, or I swear you\'ll pay for the way you\'ve treated me."',story:'He was tired of waiting for his inheritance.'},
+  ruth:{n:'Ruth Abel',r:'Night guard',k:'About to be fired',doc:'A notice on Celeste\'s letterhead: "Ruth Abel is dismissed as of Friday, without reference."',story:'Celeste was firing her without a reference after twelve years.'},
+  szabo:{n:'Count Emil Szabo',r:'Collector',k:'Celeste sold him a fake',doc:'From Count Szabo: "The Corot you sold me is a fake, Madame Varga. Return my money, or I will take it another way."',story:'Celeste had sold him a fake Corot and refused to pay him back.'},
+  lisle:{n:'Margot Lisle',r:'Rival dealer',k:'Celeste ruined her gallery',doc:'A newspaper cutting: "LISLE GALLERY CLOSES after Varga accusations." Margot has written: "You\'ll pay for this."',story:'Celeste\'s rumours had destroyed her gallery.'},
+  arden:{n:'Felix Arden',r:'Art critic',k:'Celeste was blackmailing him',doc:'A note: "Felix — another glowing review, or the papers get your letters. C.V."',story:'Celeste had been blackmailing him into writing glowing reviews.'}},
  obj:{scene:'Examine the body in the gallery',power:'Restore the power',vault:'Find the code for the vault',paintings:'Find the order of the four paintings',portfolio:'Open Celeste\'s portfolio',accuse:'Name the killer at the case board in the gallery'},
  rooms:{
   hall:{name:'Main Gallery',w:16,h:12,floor:'wood',dark:.85,power:'power',
@@ -309,115 +328,119 @@ CASES.gallery={
    doors:[{x:0,y:6,to:'office',sx:10,sy:5},{x:15,y:6,to:'studio',sx:1,sy:5},{x:8,y:0,to:'vault',sx:5,sy:6,lock:{f:'vaultOpen',t:'vaultLocked',o:'vault'}},{x:8,y:11,to:'hidden',sx:5,sy:1,req:'paintOpen'}],
    lamps:[],windows:[],pics:[[11,11,'abstract']],
    spots:[{id:'body',x:6,y:7,l:'Celeste Varga',v:'body',vo:{c:0x7a1e2a},t:'body',give:{c:['body'],d:['scene']}},
-    {id:'plinth',x:8,y:5,l:'Empty plinth',t:'plinth'},
-    {id:'p1',x:3,y:1,l:'Painting',v:'pic',vo:{tex:'sea'},t:'p1'},{id:'p2',x:12,y:1,l:'Painting',v:'pic',vo:{tex:'chair'},t:'p2'},
-    {id:'p3',x:1,y:3,l:'Painting',v:'pic',vo:{tex:'portrait'},t:'p3'},{id:'p4',x:14,y:3,l:'Painting',v:'pic',vo:{tex:'orchard'},t:'p4'},
-    {id:'plaque',x:13,y:10,l:'Brass plaque',v:'panel',vo:{c:0xc9a24a},lock:{f:'power',t:'plaqueDead',o:'power'},pz:{ty:'order',items:[{n:'Red Chair',c:'#9a2a2a'},{n:'Harbour',c:'#2f5f9e'},{n:'Lady in Blue',c:'#3a4a8a'},{n:'Orchard',c:'#5a7a3a'}],n:4,ans:[1,2,0,3],o:'paintings',f:'paintOpen',t:'paintOpen',after:'paintDone',title:'The collection plaque',desc:'"Present my treasures in the order they were painted." Four brass buttons, one for each painting.',give:{}}},
-    {id:'keypad',x:9,y:1,l:'Vault keypad',v:'panel',vo:{c:0x2a2a2e},lock:{f:'power',t:'keypadDead',o:'power'},pz:{ty:'code',n:4,ans:'1962',o:'vault',f:'vaultOpen',t:'vaultOpen',after:'vaultDone',title:'Vault keypad',desc:'A four-digit keypad beside the vault door.'}},
+    {id:'plinth',x:8,y:5,l:'Empty plinth',t:'plinth',give:{c:['plinth']}},
+    {id:'p1',x:3,y:1,l:'Harbour at Dusk',v:'pic',vo:{tex:'sea'},t:'p1'},{id:'p2',x:12,y:1,l:'The Red Chair',v:'pic',vo:{tex:'chair'},t:'p2'},
+    {id:'p3',x:1,y:3,l:'Lady in Blue',v:'pic',vo:{tex:'portrait'},t:'p3'},{id:'p4',x:14,y:3,l:'Winter Orchard',v:'pic',vo:{tex:'orchard'},t:'p4'},
+    {id:'plaque',x:13,y:10,l:'Brass plaque',v:'panel',vo:{c:0xc9a24a},lock:{f:'power',t:'plaqueDead',o:'power'},pz:{ty:'order',items:[{n:'Harbour at Dusk',c:'#2f5f9e'},{n:'The Red Chair',c:'#9a2a2a'},{n:'Lady in Blue',c:'#3a4a8a'},{n:'Winter Orchard',c:'#5a7a3a'}],ans:'$order',o:'paintings',f:'paintOpen',t:'paintOpen',after:'paintDone',title:'The collection plaque',desc:'"Present my treasures in the order they were painted." Four brass buttons, one for each painting.'}},
+    {id:'keypad',x:9,y:1,l:'Vault keypad',v:'panel',vo:{c:0x2a2a2e},lock:{f:'power',t:'keypadDead',o:'power'},pz:{ty:'code',n:4,ans:'$year',o:'vault',f:'vaultOpen',t:'vaultOpen',after:'vaultDone',trait:1,title:'Vault keypad',desc:'A four-digit keypad beside the vault door.'}},
+    {id:'slot0',x:3,y:6,l:'Card on the pedestal',v:'paper',vo:{h:1.06},slot:0},
     {id:'board',x:4,y:10,l:'Case board',board:1}]},
   office:{name:'Celeste\'s Office',w:12,h:10,floor:'carpet',dark:.85,power:'power',
    furn:[[4,3,4,2,'desk'],[1,1,2,1,'cabinet'],[9,1,2,1,'shelf'],[5,2,1,1,'chair']],
    doors:[{x:11,y:5,to:'hall',sx:1,sy:6}],lamps:[],windows:[[0,4]],
    spots:[{id:'appts',x:5,y:4,l:'Appointment book',v:'book',t:'appts',give:{c:['appts']}},
-    {id:'theo',x:7,y:3,l:'Letter',v:'paper',t:'theo',give:{c:['theo1']}},
+    {id:'slot1',x:7,y:3,l:'Letter',v:'paper',slot:1},
     {id:'opening',x:6,y:1,l:'Framed photograph',v:'pic',vo:{tex:'photo'},t:'opening',give:{c:['opening']}},
     {id:'roses',x:1,y:6,l:'Painting',v:'pic',vo:{tex:'roses'},t:'roses',give:{c:['roses']}}]},
   studio:{name:'Restoration Studio',w:12,h:10,floor:'tile',dark:.85,power:'power',
    furn:[[3,3,1,1,'easel'],[7,3,1,1,'easel'],[1,7,4,1,'bench'],[8,7,3,1,'table'],[10,1,1,2,'shelfv']],
    doors:[{x:0,y:5,to:'hall',sx:14,sy:6}],lamps:[],windows:[],
-   spots:[{id:'fusebox',x:6,y:1,l:'Fuse box',v:'panel',vo:{c:0x4a5a4a},pz:{ty:'switches',n:5,ans:[1,0,1,1,0],o:'power',f:'power',t:'powerOn',after:'powerDone',title:'Fuse box',desc:'Five breaker switches. Someone has thrown them all.'}},
+   spots:[{id:'fusebox',x:6,y:1,l:'Fuse box',v:'panel',vo:{c:0x4a5a4a},pz:{ty:'switches',n:5,ans:'$fuse',o:'power',f:'power',t:'powerOn',after:'powerDone',trait:0,title:'Fuse box',desc:'Five breaker switches. Someone has thrown them all.'}},
     {id:'elec',x:9,y:7,l:'Electrician\'s note',v:'paper',t:'elec'},
-    {id:'sketch',x:2,y:7,l:'Sketchbook',v:'book',t:'sketch',give:{c:['ines1']}},
-    {id:'canvas',x:7,y:4,l:'Canvas on the easel',t:'canvas',give:{c:['forge1']}}]},
+    {id:'slot2',x:2,y:7,l:'Sketchbook',v:'book',slot:2},
+    {id:'canvas',x:7,y:4,l:'Canvas on the easel',t:'canvas'}]},
   vault:{name:'Vault',w:10,h:8,floor:'stone',dark:.85,power:'power',
    furn:[[1,1,3,1,'cabinet'],[6,1,3,1,'shelf'],[4,4,2,1,'table']],
    doors:[{x:5,y:7,to:'hall',sx:8,sy:1}],lamps:[],windows:[],
-   spots:[{id:'ledger',x:2,y:1,l:'Authentication ledger',t:'ledgerG',give:{c:['forgeries']}},
-    {id:'draft',x:7,y:1,l:'Draft letter',v:'paper',vo:{h:1.2},t:'draft',give:{c:['draft']}},
-    {id:'portfolio',x:5,y:4,l:'Locked portfolio',v:'chest',vo:{h:.8,c:0x3a2014},pz:{ty:'word',n:4,ans:'ROSE',o:'portfolio',f:'portOpen',t:'portOpen',after:'portDone',title:'Celeste\'s portfolio',desc:'A leather portfolio with a four-letter word lock.',give:{c:['cctv','ruth1']}}}]},
+   spots:[{id:'ledgerG',x:2,y:1,l:'Sales ledger',t:'ledgerG',give:{c:['ledger']}},
+    {id:'slot3',x:7,y:1,l:'Papers',v:'paper',vo:{h:1.2},slot:3},
+    {id:'portfolio',x:5,y:4,l:'Locked portfolio',v:'chest',vo:{h:.8,c:0x3a2014},pz:{ty:'word',n:4,ans:'ROSE',o:'portfolio',f:'portOpen',t:'portOpen',after:'portDone',trait:3,title:'Celeste\'s portfolio',desc:'A leather portfolio with a four-letter word lock.'}}]},
   hidden:{name:'Private Viewing Room',w:10,h:8,floor:'carpet2',dark:.85,secret:1,power:'power',
    furn:[[2,3,2,1,'sofa'],[6,4,2,1,'table'],[8,1,1,1,'pedestal']],
    doors:[{x:5,y:0,to:'hall',sx:8,sy:10}],lamps:[[5,4,2.5]],windows:[],pics:[[3,0,'sea'],[7,0,'orchard']],
-   spots:[{id:'bust',x:7,y:4,l:'Bundle on the table',t:'bust',give:{c:['bust'],f:['ready'],o:['accuse']}},
-    {id:'theoNote',x:8,y:1,l:'Card',v:'paper',vo:{h:1.25},t:'theoNote',give:{c:['theo2']}}]}
+   spots:[{id:'bust',x:7,y:4,l:'Bundle on the table',trait:2,t:'bust'},
+    {id:'slot4',x:8,y:1,l:'Card',v:'paper',vo:{h:1.06},slot:4}]}
  },
  clues:{
-  body:{t:'The body',s:'Struck on the head with something heavy. Her watch stopped at 10:58.'},
-  appts:{t:'Appointment book',s:'"10:45 PM — Lionel, about the Duartes."',sus:'lionel',k:'Met her that night'},
-  theo1:{t:'Theo\'s letter',s:'"Give me my share now, Mother, or I swear you\'ll pay."',sus:'theo',k:'Threatened her'},
-  opening:{t:'Opening day',s:'"Varga Gallery — opened 1962."'},
-  roses:{t:'Roses',s:'"My favourite flower. I use it for everything."'},
-  ines1:{t:'Ines\'s sketchbook',s:'"Celeste sold my work under another name. I\'ll never forgive her."',sus:'ines',k:'Held a grudge'},
-  forge1:{t:'Fresh "old" canvas',s:'A 1930s style canvas, still tacky. Someone forges paintings here.',sus:'lionel',k:'Paints forgeries'},
-  forgeries:{t:'Authentication ledger',s:'Three "Duarte originals" authenticated by L. Marsh. Celeste wrote "FAKE?" beside each.',sus:'lionel',k:'His forgeries discovered'},
-  draft:{t:'Celeste\'s draft',s:'"Tomorrow I go to the police about Lionel\'s fakes."',sus:'lionel',k:'About to be exposed'},
-  cctv:{t:'CCTV stills',s:'Lionel entering at 10:52 by the back door. Nobody else after 10.',sus:'lionel',k:'There at the time'},
-  ruth1:{t:'Ruth\'s alibi',s:'CCTV: Ruth at the front desk from 9 PM to 1 AM.',sus:'ruth',k:'On camera all night'},
-  theo2:{t:'Theo\'s card',s:'"Sorry, Mother. I\'m on the night train to Paris." Stamped 9:40 PM.',sus:'theo',k:'Left town at 9:40'},
-  bust:{t:'The weapon',s:'The missing bronze bust, bloodied, wrapped in an apron stitched L.M.',sus:'lionel',k:'The weapon in his apron'}
+  body:{t:'The body',s:'Struck on the head. Her watch stopped at 10:58.'},
+  plinth:{t:'Missing bust',s:'The bronze bust is gone. That was the weapon.'},
+  appts:{t:'Appointment book',s:'"10:45 PM — a visitor." The name is blotted out.'},
+  opening:{t:'Opening day',s:'"Varga Gallery — opened {year}."'},
+  roses:{t:'Roses',s:'"My favourite flower. I use it for everything, even my locks."'},
+  ledger:{t:'Sales ledger',s:'Celeste cheated half the people she did business with.'}
  },
  text:{
-  intro:{t:'Telegram · City Police',p:['DETECTIVES. CELESTE VARGA, 63, ART DEALER, FOUND DEAD IN HER GALLERY AFTER HOURS. THE POWER WAS CUT. THE GUARD SAW NOTHING.','START BY GETTING THE LIGHTS BACK ON. THE FUSE BOX IS IN THE RESTORATION STUDIO. NAME THE KILLER AT THE CASE BOARD. — INSPECTOR LACROIX']},
-  body:{t:'Celeste Varga',p:['Celeste lies on the gallery floor beside an empty plinth. She was struck on the head with something heavy.','Her wristwatch cracked when she fell. It stopped at 10:58.']},
-  plinth:{t:'Empty plinth',p:['The label reads "Bronze Bust, 1890". The bust is gone. That was the weapon.']},
-  p1:{t:'Painting',p:['"Harbour at Dusk". The brass label beneath reads 1911.']},
-  p2:{t:'Painting',p:['"The Red Chair". The label reads 1934.']},
-  p3:{t:'Painting',p:['"Lady in Blue". The label reads 1922.']},
-  p4:{t:'Painting',p:['"Winter Orchard". The label reads 1948.']},
-  paintOpen:{t:'The collection plaque',p:['Harbour, Lady in Blue, Red Chair, Orchard. With the last button, a section of the south wall slides aside.','A hidden door. Celeste had a private room.']},
+  intro:{t:'Telegram · City Police',p:['DETECTIVES. CELESTE VARGA, 63, ART DEALER, FOUND DEAD IN HER GALLERY AFTER HOURS. THE POWER WAS CUT.','SHE MADE ENEMIES THE WAY OTHERS MAKE FRIENDS. START WITH THE FUSE BOX IN THE RESTORATION STUDIO. NAME THE KILLER AT THE CASE BOARD. — INSPECTOR LACROIX']},
+  body:{t:'Celeste Varga',p:['Celeste lies beside an empty plinth. She was struck on the head with something heavy.','Her wristwatch cracked when she fell. It stopped at 10:58.']},
+  plinth:{t:'Empty plinth',p:['The label reads "Bronze Bust, 1890". The bust is gone. That was the weapon, and the killer took it.']},
+  p1:{t:'Harbour at Dusk',p:['The brass label beneath reads {y0}.']},
+  p2:{t:'The Red Chair',p:['The label reads {y1}.']},
+  p3:{t:'Lady in Blue',p:['The label reads {y2}.']},
+  p4:{t:'Winter Orchard',p:['The label reads {y3}.']},
+  paintOpen:{t:'The collection plaque',p:['With the last button, a section of the south wall slides aside. A hidden door. Celeste had a private room.']},
   paintDone:{t:'The collection plaque',p:['The hidden door in the south wall stands open.']},
   plaqueDead:{t:'Brass plaque',p:['Four brass buttons under the words "Present my treasures in the order they were painted." Nothing lights up without power.']},
   keypadDead:{t:'Vault keypad',p:['The keypad is dark. Without power it won\'t work.']},
   vaultLocked:{t:'Vault door',p:['A steel vault door. The keypad beside it controls the lock.']},
-  vaultOpen:{t:'Vault keypad',p:['1-9-6-2. The year the gallery opened. Bolts slide back and the vault door swings open.']},
-  vaultDone:{t:'Vault keypad',p:['The vault is open.']},
-  appts:{t:'Appointment book',p:['Yesterday\'s page: "10:45 PM — Lionel, about the Duartes. Do NOT let him talk me round."']},
-  theo:{t:'Letter',p:['From Theo: "Give me my share now, Mother, or I swear you\'ll pay for the way you\'ve treated me."']},
-  opening:{t:'Framed photograph',p:['Celeste cutting a ribbon outside the gallery. Written on the frame: "Varga Gallery — opened 1962. The best year of my life."']},
-  roses:{t:'Painting',p:['A small painting of red roses. A card tucked into the frame: "My favourite flower. I use it for everything, even my locks. — C."']},
-  powerOn:{t:'Fuse box',p:['The last breaker clunks into place. Somewhere, the building hums back to life.','The light switches will work now.']},
-  powerDone:{t:'Fuse box',p:['All the breakers are set correctly.']},
-  elec:{t:'Electrician\'s note',p:['"Breaker settings for the gallery: UP, DOWN, UP, UP, DOWN. Do not change them!"']},
-  sketch:{t:'Sketchbook',p:['Ines Duarte\'s sketchbook. Scrawled across one page: "Celeste sold my work under another name. I\'ll never forgive her."']},
-  canvas:{t:'Canvas on the easel',p:['A painting in the style of the 1930s, but the paint is still tacky. Beside it: aged varnish, old nails, and a tray of brushes stamped L.M.']},
-  ledgerG:{t:'Authentication ledger',p:['Every painting the gallery sold, and who certified it. Three "Ines Duarte originals" were authenticated by Lionel Marsh.','Beside each, Celeste has written "FAKE?" in red.']},
-  draft:{t:'Draft letter',p:['"To the Chief Inspector. I have proof that Lionel Marsh has been selling forgeries through my gallery. I will bring it to you tomorrow."']},
-  portOpen:{t:'Celeste\'s portfolio',p:['R-O-S-E. The lock opens. Inside are stills from the gallery cameras.','10:52 PM: Lionel Marsh slips in through the back door. Nobody else comes in after ten.','The front desk camera shows Ruth Abel at her post from 9 PM to 1 AM.']},
-  portDone:{t:'Celeste\'s portfolio',p:['You\'ve seen the stills.']},
-  bust:{t:'Bundle on the table',p:['A canvas apron wrapped around something heavy. The bronze bust, its base caked in blood.','The apron is stitched L.M. You have enough. Return to the case board.']},
-  theoNote:{t:'Card',p:['A note from Theo: "Sorry for what I wrote, Mother. I\'m on the night train to Paris to clear my head." The ticket is stamped 9:40 PM.']}
- },
- ending:['Lionel Marsh killed Celeste Varga.','Lionel had been forging "old" paintings and certifying them as genuine. Celeste found out and planned to go to the police in the morning.','He came at 10:45 to talk her round. When she refused, he struck her with the bronze bust at 10:58, cut the power to blind the cameras, and hid the bust in her private room.','He didn\'t know the cameras had already caught him at the back door.'],
- wrong:'Inspector Lacroix shakes her head. "The evidence doesn\'t hold. Who was actually in the building at 10:58?"'
+  vaultOpen:{t:'Vault keypad',p:['Bolts slide back and the vault door swings open.','In the light you notice the keypad smudges. Someone pressed it last night with the {t1} hand, and it wasn\'t Celeste. She was right-handed and always wore gloves.']},
+  vaultDone:{t:'Vault keypad',p:['The vault is open. The smudges were made by a {t1}-handed person.']},
+  appts:{t:'Appointment book',p:['Yesterday\'s page: "10:45 PM — " and then a name, blotted out with ink.']},
+  opening:{t:'Framed photograph',p:['Celeste cutting a ribbon outside the gallery. On the frame: "Varga Gallery — opened {year}. The best year of my life."']},
+  roses:{t:'Painting',p:['A small painting of red roses. A card in the frame: "My favourite flower. I use it for everything, even my locks. — C."']},
+  powerOn:{t:'Fuse box',p:['The last breaker clunks into place and the building hums back to life. The light switches will work now.','The fuse box reeks of {t0}. Whoever threw these breakers wore it.']},
+  powerDone:{t:'Fuse box',p:['All the breakers are set. The panel still smells of {t0}.']},
+  elec:{t:'Electrician\'s note',p:['"Breaker settings for the gallery, left to right: {fuseText}. Do not change them!"']},
+  canvas:{t:'Canvas on the easel',p:['A half-restored landscape. Celeste\'s note pinned to it: "Ask who really painted this."']},
+  ledgerG:{t:'Sales ledger',p:['Every sale the gallery made, and many of them crooked. Celeste cheated half the people she did business with.']},
+  portOpen:{t:'Celeste\'s portfolio',p:['Inside are stills from the gallery cameras. At 10:52 PM someone slips in through the back door, face hidden under a hat.','You can\'t see a face, but you can see the shoes: {t3}.']},
+  portDone:{t:'Celeste\'s portfolio',p:['The visitor at 10:52 wore {t3}.']},
+  bust:{t:'Bundle on the table',p:['A canvas apron wrapped around something heavy: the bronze bust, its base caked in blood.','Caught in the dried blood is a single {t2} hair.']}
+ }
 };
 
 /* ---------------------------------------------------------------- 4 */
 CASES.lodge={
  title:'Snowbound at Kessler Lodge',sub:'A famous climber dead in a mountain lodge.',diff:'Hard',
- victim:'Dr. Helena Ward',killer:'marcus',start:{room:'hall',x:8,y:9,d:-Math.PI/2},startObj:['scene'],
+ victim:'Dr. Helena Ward',start:{room:'hall',x:8,y:9,d:-Math.PI/2},startObj:['scene'],
  items:{cabinKey:'Cabin 4 key'},
- suspects:{marcus:{n:'Marcus Hale',r:'Climbing partner'},freya:{n:'Freya Lund',r:'Lodge owner'},jonah:{n:'Jonah Pierce',r:'Journalist'},petra:{n:'Petra Ward',r:'Helena\'s sister'}},
- obj:{scene:'Get into Helena\'s cabin',keys:'Find the code for the key cabinet',locker:'Open Marcus\'s ski locker',hatch:'Open the ice cellar hatch in the boot room',cipher:'Decode Helena\'s climbing note',accuse:'Name the killer at the case board in the hall'},
- levers:[{a:'winchA',b:'winchB',f:'hatchOpen',ts:'The cellar hatch heaves open!',give:{d:['hatch']}}],
+ traits:[
+  {...HAND,f:'Helena\'s coded note: whoever threatened her is {v}-handed.'},
+  {l:'Gloves',vals:['wool mittens','leather gloves','climbing gloves'],f:'Bloodied {v} hidden in the team locker.',p:'wears {v}'},
+  {l:'Footwear',vals:['crampons','ski boots','snowshoes'],f:'Frozen prints around the weapon: {v}.',p:'wears {v}'},
+  {l:'Jacket',vals:['red','blue','orange'],f:'{v} jacket fibres on the key cabinet hinge.',p:'wears a {v} jacket'}],
+ setup(r){const d=1+r(28),m=r(2)?12:1,code=String(d).padStart(2,'0')+String(m).padStart(2,'0');const sh=2+r(8);
+  return{v:{arrive:String(d).padStart(2,'0')+' / '+String(m).padStart(2,'0'),shift:NUMW[sh]},ans:{arrive:code,shift:sh},cipher:t=>`WHOEVER THREATENS ME IS ${t[0]==='left'?'LEFT':'RIGHT'} HANDED`}},
+ pool:{
+  marcus:{n:'Marcus Hale',r:'Climbing partner',k:'Helena would expose him',doc:'Helena\'s journal: "Tomorrow I tell the press that Marcus cut Anton\'s rope on Kessler Peak."',story:'Helena was going to reveal that he cut a teammate\'s rope on Kessler Peak.'},
+  freya:{n:'Freya Lund',r:'Lodge owner',k:'Helena refused a loan',doc:'Final demands for the lodge, and a note from Freya: "Helena said no to the loan. Again. She\'ll ruin me."',story:'Helena\'s refusal to lend her money would have cost her the lodge.'},
+  jonah:{n:'Jonah Pierce',r:'Journalist',k:'Helena was suing him',doc:'A solicitor\'s letter: "Dr. Ward will sue Mr. Pierce for every penny." Jonah has scribbled: "Over my dead body. Or hers."',story:'Helena\'s lawsuit would have bankrupted him.'},
+  petra:{n:'Petra Ward',r:'Helena\'s sister',k:'Jealous of her sister',doc:'From Petra: "You always got everything, Helena. One day you\'ll lose it all."',story:'Years of jealousy finally boiled over.'},
+  sigrid:{n:'Sigrid Holm',r:'Mountain guide',k:'Helena blamed her for an accident',doc:'An inquest report: "Dr. Ward\'s testimony places the blame on guide S. Holm." Sigrid lost her licence.',story:'Helena\'s testimony had cost her her guiding licence.'},
+  leo:{n:'Leo Carver',r:'Expedition sponsor',k:'Helena dropped his company',doc:'A telegram: "CARVER OUTFITTERS RUINED IF WARD WITHDRAWS ENDORSEMENT. STOP. TALK TO HER. — L.C."',story:'Without her endorsement his company would collapse.'},
+  otto:{n:'Dr. Otto Brandt',r:'Expedition doctor',k:'Helena reported him',doc:'Helena\'s letter to the Alpine Club: "Dr. Brandt falsified our oxygen records. I will testify."',story:'Helena was about to testify that he had falsified the expedition\'s records.'}},
+ obj:{scene:'Get into Helena\'s cabin',keys:'Find the code for the key cabinet',locker:'Open the team locker',hatch:'Open the ice cellar hatch in the boot room',cipher:'Decode Helena\'s note',search:'Search the ice cellar',accuse:'Name the killer at the case board in the hall'},
+ levers:[{a:'winchA',b:'winchB',f:'hatchOpen',ts:'The cellar hatch heaves open!',give:{d:['hatch'],o:['search']}}],
  rooms:{
   hall:{name:'Lodge Hall',w:16,h:12,floor:'wood',dark:.7,
    furn:[[6,1,4,1,'fire'],[4,4,3,1,'sofa'],[9,4,3,1,'sofa'],[5,7,6,2,'rug'],[1,8,3,2,'desk'],[12,10,3,1,'board'],[14,1,1,1,'plant']],
    doors:[{x:8,y:11,to:'cabin',sx:6,sy:1,lock:{i:'cabinKey',t:'cabinLocked',o:'keys'}},{x:0,y:5,to:'kitchen',sx:10,sy:5},{x:15,y:5,to:'boot',sx:1,sy:5}],
    lamps:[[8,6,3.5]],windows:[[3,0],[12,0]],
-   spots:[{id:'keys',x:1,y:3,l:'Key cabinet',v:'panel',vo:{c:0x5a3a22},pz:{ty:'code',n:4,ans:'0712',o:'keys',f:'keysOpen',t:'keysOpen',after:'keysDone',title:'Key cabinet',desc:'A glass key cabinet with a four-digit lock. A sticker: "Guest keys — code is the guest\'s arrival (day, month)".',give:{i:['cabinKey']}}},
+   spots:[{id:'keys',x:1,y:3,l:'Key cabinet',v:'panel',vo:{c:0x5a3a22},pz:{ty:'code',n:4,ans:'$arrive',o:'keys',f:'keysOpen',t:'keysOpen',after:'keysDone',trait:3,title:'Key cabinet',desc:'A glass key cabinet with a four-digit lock. A sticker: "Guest keys — code is the guest\'s arrival (day, month)".',give:{i:['cabinKey']}}},
     {id:'guestbook',x:2,y:8,l:'Guest book',v:'book',t:'guestbook',give:{c:['guests']}},
+    {id:'slot0',x:5,y:4,l:'Note on the sofa',v:'paper',vo:{h:.52},slot:0},
     {id:'board',x:13,y:10,l:'Case board',board:1}]},
   kitchen:{name:'Kitchen',w:12,h:10,floor:'tile',dark:.72,
    furn:[[1,1,4,1,'box',{c:0x6b5a4a,h:.92}],[6,1,2,1,'box',{c:0x2a2a2e,h:.9}],[4,5,4,2,'table'],[10,7,1,2,'shelfv']],
    doors:[{x:11,y:5,to:'hall',sx:1,sy:5}],lamps:[[6,5,3]],windows:[[0,3]],
-   spots:[{id:'notepad',x:5,y:5,l:'Notepad',v:'paper',t:'notepad',give:{c:['jonah1']}},
-    {id:'bills',x:2,y:1,l:'Pile of bills',v:'paper',vo:{h:.95},t:'bills',give:{c:['freya1','freya2']}}]},
+   spots:[{id:'slot1',x:5,y:5,l:'Notepad',v:'paper',slot:1},
+    {id:'slot2',x:2,y:1,l:'Pile of papers',v:'paper',vo:{h:.95},slot:2}]},
   boot:{name:'Boot Room',w:12,h:10,floor:'planks',dark:.76,
    furn:[[1,1,3,1,'box',{c:0x4a3a2a,h:1.6}],[7,1,4,1,'box',{c:0x5a6a7a,h:1.9}],[4,5,3,1,'bench']],
    doors:[{x:0,y:5,to:'hall',sx:14,sy:5},{x:6,y:9,to:'icecellar',sx:5,sy:1,gate:1,lock:{f:'hatchOpen',t:'hatchLocked',o:'hatch'}}],
    lamps:[[6,4,3]],windows:[],
    spots:[{id:'axes',x:2,y:1,l:'Ice axe rack',t:'axes',give:{c:['axes']}},
-    {id:'locker',x:9,y:1,l:'Ski locker "M.H."',v:'none',pz:{ty:'word',n:5,ans:'ANTON',o:'locker',f:'lockerOpen',t:'lockerOpen',after:'lockerDone',title:'Ski locker "M.H."',desc:'Marcus Hale\'s locker. A five-letter word lock.',give:{c:['rope']}}},
+    {id:'locker',x:9,y:1,l:'Team locker',pz:{ty:'word',n:5,ans:'ANTON',o:'locker',f:'lockerOpen',t:'lockerOpen',after:'lockerDone',trait:1,title:'Team locker',desc:'The expedition team\'s shared locker. A five-letter word lock.'}},
+    {id:'slot3',x:5,y:5,l:'Papers on the bench',v:'paper',slot:3},
     {id:'winchA',x:1,y:8,l:'Left winch',v:'lever',lever:1},{id:'winchB',x:10,y:8,l:'Right winch',v:'lever',lever:1}]},
   cabin:{name:'Cabin 4',w:12,h:10,floor:'carpet',dark:.78,enter:{d:['scene']},
    furn:[[1,1,3,2,'bunk'],[8,2,3,1,'desk'],[9,1,1,1,'chair'],[1,7,1,1,'plant']],
@@ -425,129 +448,123 @@ CASES.lodge={
    spots:[{id:'body',x:5,y:6,l:'Helena Ward',v:'body',vo:{c:0x3a5a6a},t:'body',give:{c:['body']}},
     {id:'photo',x:6,y:1,l:'Team photograph',v:'pic',vo:{tex:'photo'},t:'photo',give:{c:['photo'],o:['locker']}},
     {id:'journal',x:9,y:2,l:'Helena\'s journal',v:'book',t:'journal',give:{c:['journal'],o:['hatch']}},
-    {id:'petra',x:1,y:4,l:'Letter',v:'paper',vo:{h:.05},t:'petra',give:{c:['petra1','petra2']}}]},
+    {id:'slot4',x:1,y:4,l:'Letter',v:'paper',vo:{h:.05},slot:4}]},
   icecellar:{name:'Ice Cellar',w:10,h:8,floor:'stone',dark:.86,secret:1,
    furn:[[1,1,3,1,'box',{c:0xbad4e0,h:1.2}],[6,1,3,1,'box',{c:0xbad4e0,h:1.2}],[1,5,2,2,'crate']],
    doors:[{x:5,y:0,to:'boot',sx:6,sy:8}],lamps:[[5,4,2.5]],windows:[],
-   spots:[{id:'cipher',x:7,y:1,l:'Note frozen in the ice',v:'paper',vo:{h:1.25},pz:{ty:'cipher',plain:'MARCUS CUT THE ROPE ON KESSLER PEAK',ans:5,o:'cipher',f:'cipherDone',t:'cipherDone',title:'Helena\'s climbing note',desc:'A note in Helena\'s hand, written in the team\'s climbing code. Each letter has been shifted forward along the alphabet.',give:{c:['cipher']}}},
-    {id:'axe',x:2,y:1,l:'Something in the ice',t:'axe',give:{c:['axe'],f:['ready'],o:['accuse','cipher']}}]}
+   spots:[{id:'cipher',x:7,y:1,l:'Note frozen in the ice',v:'paper',vo:{h:1.25},pz:{ty:'cipher',ans:'$shift',o:'cipher',f:'cipherDone',t:'cipherDone',trait:0,title:'Helena\'s note',desc:'A note in Helena\'s hand, written in the team\'s climbing code. Each letter has been moved forward along the alphabet.'}},
+    {id:'axe',x:2,y:1,l:'Something in the ice',trait:2,t:'axe',give:{c:['axe'],o:['cipher'],d:['search']}}]}
  },
  clues:{
-  guests:{t:'Guest book',s:'"Dr. H. Ward — arrived 07 / 12." Also: M. Hale, J. Pierce, P. Ward.'},
-  body:{t:'Helena\'s body',s:'Killed by a single blow from something sharp and narrow.'},
-  jonah1:{t:'Jonah\'s notepad',s:'"If she won\'t give me the Kessler story, I\'ll print the rumours and ruin her."',sus:'jonah',k:'Threatened to ruin her'},
-  freya1:{t:'Freya\'s bills',s:'The lodge is bankrupt. Helena refused Freya a loan.',sus:'freya',k:'Refused a loan'},
-  freya2:{t:'Freya\'s alibi',s:'Freya was snowed in at the village inn all night.',sus:'freya',k:'Not at the lodge'},
-  axes:{t:'Ice axe rack',s:'One axe missing. Its empty hook is labelled M.H.',sus:'marcus',k:'His ice axe is missing'},
-  photo:{t:'Team photograph',s:'Kessler Peak team, 2019: Helena, Marcus, and Anton, who never came home.'},
-  journal:{t:'Helena\'s journal',s:'"Tomorrow I tell the press what really happened to Anton."',sus:'marcus',k:'Helena would expose him'},
-  petra1:{t:'Petra\'s letter',s:'"You always got everything, Helena. One day you\'ll lose it all."',sus:'petra',k:'Jealous of her sister'},
-  petra2:{t:'Petra\'s alibi',s:'Petra was at the hospital with a sprained ankle until morning.',sus:'petra',k:'At the hospital'},
-  rope:{t:'Cut rope',s:'In Marcus\'s locker: Anton\'s rope, sliced clean through.',sus:'marcus',k:'Cut his teammate\'s rope'},
-  axe:{t:'The weapon',s:'Marcus\'s ice axe, hidden in the ice, stained with blood.',sus:'marcus',k:'His axe was the weapon'},
-  cipher:{t:'Helena\'s note',s:'"MARCUS CUT THE ROPE ON KESSLER PEAK."',sus:'marcus',k:'Helena knew his secret'}
+  guests:{t:'Guest book',s:'"Dr. H. Ward, Cabin 4 — arrived {arrive}."'},
+  body:{t:'Helena\'s body',s:'A single blow from something sharp and narrow.'},
+  axes:{t:'Ice axe rack',s:'One axe missing. The hook labels have been torn off.'},
+  photo:{t:'Team photograph',s:'Kessler Peak, 2019: Helena, Marcus, and ANTON, who never came home.'},
+  journal:{t:'Helena\'s journal',s:'"Our climbing code: move each letter forward {shift}."'},
+  axe:{t:'The weapon',s:'The missing ice axe, frozen in the ice, its pick dark with blood.'}
  },
  text:{
-  intro:{t:'Radio message · Mountain Rescue',p:['DETECTIVES. DR. HELENA WARD, THE MOUNTAINEER, IS DEAD IN CABIN 4 AT KESSLER LODGE. THE ROAD IS SNOWED IN.','THE CABIN IS LOCKED AND THE KEY IS IN THE KEY CABINET IN THE HALL. NAME THE KILLER AT THE CASE BOARD. — OFFICER BRANDT']},
-  keysOpen:{t:'Key cabinet',p:['0-7-1-2. The cabinet opens. You take the key to Cabin 4.']},
-  keysDone:{t:'Key cabinet',p:['The cabinet is open.']},
-  guestbook:{t:'Guest book',p:['"Dr. H. Ward, Cabin 4 — arrived 07 / 12."','Other guests this week: M. Hale, J. Pierce, P. Ward.']},
+  intro:{t:'Radio message · Mountain Rescue',p:['DETECTIVES. DR. HELENA WARD, THE MOUNTAINEER, IS DEAD IN CABIN 4 AT KESSLER LODGE. THE ROAD IS SNOWED IN.','FIVE PEOPLE AT THE LODGE HAD A GRUDGE. THE CABIN KEY IS IN THE KEY CABINET IN THE HALL. NAME THE KILLER AT THE CASE BOARD. — OFFICER BRANDT']},
+  keysOpen:{t:'Key cabinet',p:['The cabinet opens. You take the key to Cabin 4.','Caught on the hinge are a few {t3} jacket fibres. Someone else opened this cabinet last night.']},
+  keysDone:{t:'Key cabinet',p:['The cabinet is open. The fibres on the hinge are from a {t3} jacket.']},
+  guestbook:{t:'Guest book',p:['"Dr. H. Ward, Cabin 4 — arrived {arrive}." Every guest this week had come to see her.']},
   cabinLocked:{t:'Cabin 4',p:['Locked. The guest keys are kept in the key cabinet on the west wall.']},
-  notepad:{t:'Notepad',p:['Jonah Pierce\'s notes: "If she won\'t give me the Kessler story, I\'ll print the rumours anyway and ruin her."']},
-  bills:{t:'Pile of bills',p:['Final demands. The lodge is bankrupt. A note from Freya: "Helena said no to the loan. Again."','A message from the village inn: "Freya, the pass is closed. You\'ll have to stay the night here."']},
-  axes:{t:'Ice axe rack',p:['A row of ice axes, each on a labelled hook. The hook marked M.H. is empty.']},
-  lockerOpen:{t:'Ski locker',p:['A-N-T-O-N. The locker opens. Inside, under Marcus\'s skis, is a coil of old climbing rope.','The tag reads "Anton". It has been sliced clean through with a blade.']},
-  lockerDone:{t:'Ski locker',p:['The locker is open. The cut rope is inside.']},
-  hatchLocked:{t:'Cellar hatch',p:['A heavy hatch in the floor, raised by two winches on opposite walls. They slip back after a few seconds, so both must turn together.']},
+  axes:{t:'Ice axe rack',p:['A row of ice axes on hooks. One is missing, and every label has been torn off.']},
+  lockerOpen:{t:'Team locker',p:['The locker opens. Stuffed behind the ropes is a pair of {t1}, stiff with dried blood.']},
+  lockerDone:{t:'Team locker',p:['The bloodied {t1} are still inside.']},
+  hatchLocked:{t:'Cellar hatch',p:['A heavy hatch raised by two winches on opposite walls. They slip back after a few seconds, so both must turn together.']},
   body:{t:'Helena Ward',p:['Helena lies on the floor of her cabin. A single deep wound, from something sharp and narrow.','Whatever it was, the killer took it with them.']},
-  photo:{t:'Team photograph',p:['"Kessler Peak Expedition, 2019." Three climbers: Helena, Marcus Hale, and a young man labelled ANTON.','Anton never came home from that climb.']},
-  journal:{t:'Helena\'s journal',p:['"I can\'t carry it any longer. Tomorrow I tell the press what really happened to Anton on Kessler Peak."','"Whoever wants the truth will find my note in the ice cellar, written in our code."']},
-  petra:{t:'Letter',p:['From Petra: "You always got everything, Helena. One day you\'ll lose it all."','Tucked inside, a hospital slip: "P. Ward — sprained ankle, admitted 8 PM, discharged 7 AM."']},
-  cipherDone:{t:'Helena\'s note',p:['MARCUS CUT THE ROPE ON KESSLER PEAK.']},
-  axe:{t:'Something in the ice',p:['Frozen into a block of ice is an ice axe, its pick dark with blood. The handle is stamped M.H.','You have enough. Decode Helena\'s note if you like, then return to the case board.']}
- },
- ending:['Marcus Hale killed Helena Ward.','On Kessler Peak in 2019, Marcus cut his teammate Anton\'s rope to save himself. Helena saw it and kept the secret for years.','When Marcus learned she would tell the press, he came to her cabin and killed her with his ice axe.','He hid the axe in the ice cellar, never knowing Helena had left her note there too.'],
- wrong:'Officer Brandt sighs. "That doesn\'t add up. Check who had the weapon, and who had a reason."'
+  photo:{t:'Team photograph',p:['"Kessler Peak Expedition, 2019." Three climbers: Helena, Marcus Hale, and a young man labelled ANTON. Anton never came home.']},
+  journal:{t:'Helena\'s journal',p:['"Someone at this lodge has threatened me. If anything happens, my note is in the ice cellar, in our climbing code."','"The code is simple: move each letter forward {shift}."']},
+  cipherDone:{t:'Helena\'s note',p:['{cipher}.']},
+  axe:{t:'Something in the ice',p:['Frozen into a block of ice is the missing ice axe, its pick dark with blood.','Around it, frozen into the frost, are the killer\'s prints: {t2}.']}
+ }
 };
 
 /* ---------------------------------------------------------------- 5 */
 CASES.theatre={
  title:'The Final Curtain',sub:'A leading lady poisoned on opening night.',diff:'Hard',
- victim:'Rosalind Gray',killer:'daisy',start:{room:'stage',x:8,y:8,d:-Math.PI/2},startObj:['scene'],
+ victim:'Rosalind Gray',start:{room:'stage',x:8,y:8,d:-Math.PI/2},startObj:['scene'],
  items:{propKey:'Prop room key'},
- suspects:{daisy:{n:'Daisy Moore',r:'Understudy'},victor:{n:'Victor Lane',r:'Director'},felix:{n:'Felix Grant',r:'Rosalind\'s ex-husband'},bertie:{n:'Bertie Bloom',r:'Stagehand'}},
- obj:{scene:'Examine the body in Dressing Room 7',cue:'Set the stage lights for Cue 12',piano:'Play Rosalind\'s song on the pit piano',props:'Unlock the prop room',trunk:'Open the locked costume trunk',cipher:'Decode Rosalind\'s diary',accuse:'Name the killer at the case board on stage'},
+ traits:[
+  {...HAND,f:'Rosalind\'s diary: whoever threatened her writes {v}-handed.'},
+  {l:'Scent',vals:['violets','sandalwood','lily of the valley'],f:'The prop key\'s ribbon smells of {v}.',p:'wears {v}'},
+  {l:'Footwear',vals:['tap shoes','brogues','ballet flats'],f:'Fresh prints under the stage: {v}.',p:'wears {v}'},
+  {l:'Ring',vals:['gold signet ring','silver band','garnet ring'],f:'The poison bottle is scratched by a {v}.',p:'wears a {v}'}],
+ setup(r){let cue;do{cue=[r(2),r(2),r(2),r(2),r(2)]}while(cue.every(x=>!x)||cue.every(x=>x));const notes=['C','D','E','F','G'],mel=[r(5),r(5),r(5),r(5),r(5)];
+  return{v:{cueText:cue.map((b,i)=>b?i+1:0).filter(Boolean).join(', '),melody:mel.map(i=>notes[i]).join(', ')},ans:{cue,melody:mel,shift:7},cipher:t=>`WHOEVER THREATENS ME WRITES ${t[0]==='left'?'LEFT':'RIGHT'} HANDED`}},
+ pool:{
+  daisy:{n:'Daisy Moore',r:'Understudy',k:'Wanted Rosalind\'s role',doc:'Daisy\'s notebook: "Always the understudy. If Rosalind can\'t go on, Juliet is mine at last."',story:'She wanted the role of Juliet for herself.'},
+  victor:{n:'Victor Lane',r:'Director',k:'Rosalind was quitting his show',doc:'Rosalind\'s letter to Victor: "I am leaving the production after tonight." Victor has scrawled: "Over my dead body."',story:'Her leaving would have closed his show and ruined him.'},
+  felix:{n:'Felix Grant',r:'Ex-husband',k:'The divorce',doc:'A telegram from Felix: "Sign the divorce papers tonight, Rosalind, or you\'ll regret it."',story:'The divorce would have left him with nothing.'},
+  bertie:{n:'Bertie Bloom',r:'Stagehand',k:'She had him sacked',doc:'A dismissal notice: "B. Bloom, stagehand, dismissed at Miss Gray\'s request." Bertie has written: "She\'ll be sorry."',story:'She had him sacked after twenty years backstage.'},
+  clara:{n:'Clara Vane',r:'Rival actress',k:'Rosalind stole her part',doc:'A review: "Miss Gray triumphs in the role that Miss Vane was promised." Clara has torn it in half.',story:'Rosalind had taken the part Clara was promised.'},
+  harlan:{n:'Mr. Harlan',r:'Producer',k:'A large insurance policy',doc:'An insurance policy: "On the life of Rosalind Gray — beneficiary: H. Harlan Productions, £20,000."',story:'Her death would pay his company a fortune in insurance.'},
+  cole:{n:'Sebastian Cole',r:'Leading man',k:'Rosalind rejected him',doc:'A love letter from Sebastian, returned unopened. On the envelope, in Rosalind\'s hand: "Never."',story:'She had rejected him one time too many.'}},
+ obj:{scene:'Examine the body in Dressing Room 7',cue:'Set the stage lights for Cue 12',piano:'Play Rosalind\'s song on the pit piano',props:'Unlock the prop room',trunk:'Open the costume trunk in the prop room',cipher:'Decode Rosalind\'s diary',search:'Search under the stage',accuse:'Name the killer at the case board on stage'},
  rooms:{
   stage:{name:'Stage',w:16,h:12,floor:'wood',dark:.78,
    furn:[[1,1,6,1,'curtain'],[9,1,6,1,'curtain'],[5,4,6,4,'rug'],[2,10,3,1,'board'],[12,8,2,1,'table'],[3,5,1,1,'box',{c:0x6a2a2a,h:.5}]],
    doors:[{x:0,y:6,to:'dressing',sx:10,sy:5},{x:15,y:6,to:'props',sx:1,sy:5,lock:{i:'propKey',t:'propsLocked',o:'props'}},{x:8,y:11,to:'pit',sx:6,sy:1},{x:8,y:0,to:'under',sx:6,sy:4,req:'cueDone'}],
    lamps:[[8,6,4]],windows:[],
-   spots:[{id:'switchboard',x:14,y:3,l:'Lighting board',v:'panel',vo:{c:0x2a2a2e},pz:{ty:'switches',n:5,ans:[0,1,1,0,1],o:'cue',f:'cueDone',t:'cueDone',after:'cueAgain',title:'Lighting board',desc:'Five lamp switches for the stage lights. Each cue lights a different set.'}},
+   spots:[{id:'switchboard',x:14,y:3,l:'Lighting board',v:'panel',vo:{c:0x2a2a2e},pz:{ty:'switches',n:5,ans:'$cue',o:'cue',f:'cueDone',t:'cueDone',after:'cueAgain',title:'Lighting board',desc:'Five lamp switches for the stage lights. Each cue lights a different set.',give:{o:['search']}}},
     {id:'goblet',x:12,y:8,l:'Prop goblet',v:'cup',t:'goblet'},
+    {id:'slot0',x:3,y:5,l:'Note on the trunk',v:'paper',vo:{h:.5},slot:0},
     {id:'board',x:3,y:10,l:'Case board',board:1}]},
   dressing:{name:'Dressing Room 7',w:12,h:10,floor:'carpet',dark:.72,
    furn:[[4,1,4,1,'vanity'],[1,6,1,3,'box',{c:0x7a3a4a,h:1.7}],[8,6,3,1,'sofa']],
    doors:[{x:11,y:5,to:'stage',sx:1,sy:6}],lamps:[[6,3,3]],windows:[],
    spots:[{id:'body',x:5,y:5,l:'Rosalind Gray',v:'body',vo:{c:0xc8a040},t:'body',give:{c:['body'],d:['scene'],o:['cue','piano']}},
     {id:'wine',x:6,y:1,l:'Wine glass',v:'cup',vo:{h:.85},t:'wine',give:{c:['wine']}},
-    {id:'cuesheet',x:4,y:1,l:'Cue sheet',v:'paper',vo:{h:.85},t:'cuesheet'},
-    {id:'telegram',x:9,y:6,l:'Telegram',v:'paper',vo:{h:.5},t:'felix',give:{c:['felix1']}},
-    {id:'diary',x:7,y:1,l:'Rosalind\'s diary',v:'book',vo:{h:.85},pz:{ty:'cipher',plain:'DAISY ASKED TO BORROW MY KEY',ans:7,o:'cipher',f:'cipherDone',t:'cipherDone',title:'Rosalind\'s diary',desc:'Her last entry is in code. On the cover: "Shift by my lucky number." Her lucky number is on her dressing room door.',give:{c:['cipher']}}}]},
+    {id:'cuesheet',x:4,y:1,l:'Cue sheet',v:'paper',vo:{h:.85},t:'cuesheet',give:{c:['cue']}},
+    {id:'slot1',x:9,y:6,l:'Telegram',v:'paper',vo:{h:.5},slot:1},
+    {id:'diary',x:7,y:1,l:'Rosalind\'s diary',v:'book',vo:{h:.85},pz:{ty:'cipher',ans:'$shift',o:'cipher',f:'cipherDone',t:'cipherDone',trait:0,title:'Rosalind\'s diary',desc:'Her last entry is in code. On the cover: "Shift back by my lucky number." Her lucky number is on her dressing room door.'}}]},
   pit:{name:'Orchestra Pit',w:12,h:8,floor:'wood2',dark:.78,
    furn:[[2,1,3,2,'piano'],[7,3,1,1,'chair'],[9,3,1,1,'chair'],[7,5,1,1,'chair'],[9,5,1,1,'chair']],
    doors:[{x:6,y:0,to:'stage',sx:8,sy:10}],lamps:[[4,3,2.5]],windows:[],
-   spots:[{id:'piano',x:3,y:2,l:'Piano',pz:{ty:'order',items:[{n:'C',c:'#e8e4da'},{n:'D',c:'#e8e4da'},{n:'E',c:'#e8e4da'},{n:'F',c:'#e8e4da'},{n:'G',c:'#e8e4da'}],n:5,ans:[2,1,0,1,2],o:'piano',f:'pianoDone',t:'pianoDone',after:'pianoAgain',title:'Pit piano',desc:'Five keys are marked with chalk. The lid has a small locked compartment.',give:{i:['propKey'],o:['props']}}},
-    {id:'music',x:5,y:1,l:'Sheet music',v:'paper',vo:{h:1.05},t:'music'},
-    {id:'stagelog',x:10,y:6,l:'Stage door log',v:'book',vo:{h:.05},t:'stagelog',give:{c:['bertie1','felix2']}}]},
+   spots:[{id:'piano',x:3,y:2,l:'Piano',pz:{ty:'order',items:[{n:'C',c:'#e8e4da'},{n:'D',c:'#e8e4da'},{n:'E',c:'#e8e4da'},{n:'F',c:'#e8e4da'},{n:'G',c:'#e8e4da'}],ans:'$melody',o:'piano',f:'pianoDone',t:'pianoDone',after:'pianoAgain',trait:1,title:'Pit piano',desc:'Five keys are marked with chalk. The lid has a small locked compartment.',give:{i:['propKey'],o:['props']}}},
+    {id:'music',x:5,y:1,l:'Sheet music',v:'paper',vo:{h:1.05},t:'music',give:{c:['music']}},
+    {id:'slot2',x:10,y:6,l:'Papers on the floor',v:'paper',vo:{h:.05},slot:2}]},
   props:{name:'Prop Room',w:12,h:10,floor:'planks',dark:.8,
    furn:[[1,1,4,1,'shelf'],[7,1,4,1,'shelf'],[5,5,2,1,'box',{c:0x4a2a1a,h:.7}],[1,7,1,1,'barrel'],[9,6,2,2,'crate']],
    doors:[{x:0,y:5,to:'stage',sx:14,sy:6}],lamps:[[6,4,3]],windows:[],
-   spots:[{id:'trunk',x:5,y:5,l:'Costume trunk "D.M."',pz:{ty:'word',n:6,ans:'JULIET',o:'trunk',f:'trunkOpen',t:'trunkOpen',after:'trunkDone',title:'Costume trunk',desc:'Daisy Moore\'s trunk. A six-letter word lock.',give:{c:['poison'],f:['ready'],o:['accuse']}}},
-    {id:'contract',x:3,y:1,l:'Contract',v:'paper',vo:{h:1.2},t:'contract',give:{c:['victor1','victor2']}}]},
+   spots:[{id:'trunk',x:5,y:5,l:'Costume trunk',pz:{ty:'word',n:6,ans:'JULIET',o:'trunk',f:'trunkOpen',t:'trunkOpen',after:'trunkDone',trait:3,title:'Costume trunk',desc:'An old costume trunk. A six-letter word lock.'}},
+    {id:'slot3',x:3,y:1,l:'Papers on the shelf',v:'paper',vo:{h:1.2},slot:3}]},
   under:{name:'Under the Stage',w:12,h:6,floor:'stone',dark:.88,secret:1,enter:{o:['trunk']},
-   furn:[[1,1,2,1,'crate'],[8,1,3,1,'box',{c:0x3a3a40,h:1}]],
+   furn:[[1,1,2,1,'crate'],[8,1,3,1,'box',{c:0x3a3a40,h:1}],[5,2,3,2,'mud']],
    doors:[{x:6,y:5,to:'stage',sx:8,sy:1}],lamps:[[6,2,2.5]],windows:[],
-   spots:[{id:'poster',x:9,y:1,l:'Old poster',v:'paper',vo:{h:1.05},t:'poster',give:{c:['dream']}},
-    {id:'ddiary',x:2,y:1,l:'Notebook',v:'book',vo:{h:.95},t:'ddiary',give:{c:['ddiary']}}]}
+   spots:[{id:'poster',x:9,y:1,l:'Old poster',v:'paper',vo:{h:1.05},t:'poster',give:{c:['poster']}},
+    {id:'prints',x:6,y:2,l:'Footprints',trait:2,t:'prints',give:{d:['search']}},
+    {id:'slot4',x:2,y:1,l:'Notebook',v:'book',vo:{h:.95},slot:4}]}
  },
  clues:{
   body:{t:'The body',s:'Bitter almonds on her lips. Poisoned with cyanide.'},
-  wine:{t:'Wine glass',s:'Her pre-show wine, laced with cyanide.'},
-  felix1:{t:'Felix\'s telegram',s:'"Sign the divorce papers tonight or you\'ll regret it."',sus:'felix',k:'Threatened her'},
-  bertie1:{t:'Stage door log',s:'Felix was refused entry at 6:30 and never came in. Bertie was at the stage door all night.',sus:'bertie',k:'At the stage door all night'},
-  felix2:{t:'Felix turned away',s:'Felix never got inside the theatre.',sus:'felix',k:'Never got inside'},
-  victor1:{t:'Victor\'s contract',s:'Rosalind was quitting Victor\'s show. It would close.',sus:'victor',k:'She was ruining his show'},
-  victor2:{t:'Victor\'s alibi',s:'Victor was in the front of house with the critics from 6 until curtain.',sus:'victor',k:'With the critics'},
-  cipher:{t:'Rosalind\'s diary',s:'"DAISY ASKED TO BORROW MY KEY."',sus:'daisy',k:'Asked for Rosalind\'s key'},
-  dream:{t:'Old poster',s:'Daisy\'s dream role, written on her poster: JULIET.'},
-  ddiary:{t:'Daisy\'s notebook',s:'"If Rosalind can\'t go on, Juliet is mine at last."',sus:'daisy',k:'Wanted her role'},
-  poison:{t:'Cyanide',s:'In Daisy\'s trunk: photographer\'s cyanide and Rosalind\'s spare key.',sus:'daisy',k:'Had the poison and the key'}
+  wine:{t:'Wine glass',s:'Her pre-show wine, laced with cyanide. Everyone knew her ritual.'},
+  cue:{t:'Cue sheet',s:'"Cue 12: lamps {cueText}. Trap opens."'},
+  music:{t:'Sheet music',s:'"Rosalind\'s Song": {melody}.'},
+  poster:{t:'Old poster',s:'"Romeo & Juliet" — the word JULIET in lipstick.'}
  },
  text:{
-  intro:{t:'Telegram · Metropolitan Police',p:['DETECTIVES. ROSALIND GRAY, THE ACTRESS, FOUND DEAD IN DRESSING ROOM 7 OF THE ROYAL ODEON BEFORE OPENING NIGHT.','THE SHOW IS CANCELLED AND THE THEATRE IS YOURS. NAME THE KILLER AT THE CASE BOARD ON STAGE. — INSPECTOR HOLT']},
+  intro:{t:'Telegram · Metropolitan Police',p:['DETECTIVES. ROSALIND GRAY, THE ACTRESS, FOUND DEAD IN DRESSING ROOM 7 OF THE ROYAL ODEON BEFORE OPENING NIGHT.','HALF THE COMPANY HAD REASON TO HATE HER. FOLLOW EVERY LEAD AND NAME THE KILLER AT THE CASE BOARD ON STAGE. — INSPECTOR HOLT']},
   body:{t:'Rosalind Gray',p:['Rosalind is slumped beside her dressing table, still in her Juliet costume. Her lips smell faintly of bitter almonds.','Cyanide. Somebody poisoned her.']},
   wine:{t:'Wine glass',p:['Her pre-show glass of wine, a tradition everyone in the company knew about. A bitter almond smell rises from the dregs.']},
-  cuesheet:{t:'Cue sheet',p:['The lighting cues for tonight\'s show. Circled in red: "Cue 12 — lamps 2, 3 and 5 only. Trap opens."']},
-  felix:{t:'Telegram',p:['From Felix Grant: "Sign the divorce papers tonight, Rosalind, or you\'ll regret it. I\'ll be at the stage door at half six."']},
-  cipherDone:{t:'Rosalind\'s diary',p:['DAISY ASKED TO BORROW MY KEY.','Rosalind always locked her dressing room. Someone needed a key to reach her wine.']},
-  cueDone:{t:'Lighting board',p:['Lamps 2, 3 and 5. Cue 12. With a heavy clunk, the stage trapdoor at the back of the stage drops open.']},
+  cuesheet:{t:'Cue sheet',p:['The lighting cues for tonight. Circled in red: "Cue 12 — lamps {cueText} only. Trap opens."']},
+  cipherDone:{t:'Rosalind\'s diary',p:['{cipher}.','Rosalind kept every threatening note she received. Whoever sent them writes {t0}-handed.']},
+  cueDone:{t:'Lighting board',p:['Cue 12. With a heavy clunk, the trapdoor at the back of the stage drops open.']},
   cueAgain:{t:'Lighting board',p:['Cue 12 is set. The trapdoor is open.']},
   goblet:{t:'Prop goblet',p:['The prop goblet for the poison scene. Painted tin, perfectly harmless.']},
-  propsLocked:{t:'Prop room',p:['Locked. Bertie the stagehand says the spare key is "somewhere in the pit piano".']},
-  music:{t:'Sheet music',p:['"Rosalind\'s Song". The opening notes are circled: E, D, C, D, E.']},
-  pianoDone:{t:'Pit piano',p:['E, D, C, D, E. A little drawer in the lid springs open. Inside is the prop room key.']},
-  pianoAgain:{t:'Pit piano',p:['The drawer in the lid is empty.']},
-  stagelog:{t:'Stage door log',p:['Bertie Bloom\'s log: "6:30 PM — Mr. F. Grant, refused entry on Miss Gray\'s orders. He left shouting."','"On the door all night. Nobody else in or out."']},
-  trunkOpen:{t:'Costume trunk',p:['J-U-L-I-E-T. The trunk opens. Under Daisy\'s costumes is a brown bottle: photographer\'s cyanide.','Taped beneath it is a key labelled DRESSING ROOM 7. You have enough. Return to the case board.']},
-  trunkDone:{t:'Costume trunk',p:['The trunk is open.']},
-  contract:{t:'Contract',p:['Rosalind\'s letter to Victor Lane: "I am leaving the production after tonight." Victor has scrawled: "This will close the show!"','A note from the box office: "Mr. Lane with the critics in the front of house, 6 PM until curtain."']},
-  poster:{t:'Old poster',p:['A faded poster: "DAISY MOORE, understudy". Across it, in lipstick: "One day I\'ll be JULIET."']},
-  ddiary:{t:'Notebook',p:['Daisy\'s notebook: "Always the understudy. If Rosalind can\'t go on tonight, Juliet is mine at last."']}
- },
- ending:['Daisy Moore killed Rosalind Gray.','For three seasons Daisy waited in the wings as Rosalind\'s understudy. Tonight she decided to take the role for good.','She borrowed Rosalind\'s key, slipped photographer\'s cyanide into her pre-show wine, and hid the bottle in her own costume trunk.','Rosalind never made it to the stage, and neither will Daisy.'],
- wrong:'Inspector Holt raises an eyebrow. "No. Who could get into her locked dressing room, and who had the poison?"'
+  propsLocked:{t:'Prop room',p:['Locked. A note on the door: "Spare key in the pit piano. — B."']},
+  music:{t:'Sheet music',p:['"Rosalind\'s Song". The opening notes are circled: {melody}.']},
+  pianoDone:{t:'Pit piano',p:['A little drawer in the lid springs open. Inside is the prop room key on a silk ribbon.','The ribbon smells strongly of {t1}. Whoever hid the key here wore it.']},
+  pianoAgain:{t:'Pit piano',p:['The drawer is empty. The ribbon smelled of {t1}.']},
+  trunkOpen:{t:'Costume trunk',p:['The trunk opens. Under the costumes is a brown bottle: photographer\'s cyanide.','The label is scratched in a ring pattern, the kind a {t3} would make.']},
+  trunkDone:{t:'Costume trunk',p:['The bottle is scratched by a {t3}.']},
+  poster:{t:'Old poster',p:['A faded poster for "Romeo & Juliet". Across it, in lipstick: JULIET.']},
+  prints:{t:'Footprints',p:['Fresh prints in the dust beneath the trapdoor. Someone came this way to reach the prop room unseen. The prints were made by {t2}.']}
+ }
 };
 const CASE_ORDER=['harrow','lighthouse','gallery','lodge','theatre'];
+
 /* ---------------------------- CORE ---------------------------- */
 const W=960, H=544, HUD=32;
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
@@ -566,7 +583,38 @@ const GEN_TEXT={
 };
 function C(){return CASES[G.cs]}
 function RM(rid){return C().rooms[rid||G.rm]}
-function TX(id){if(id==='win')return{t:'Case closed',p:C().ending};if(id==='wrongGuess')return{t:'Not quite',p:[C().wrong]};return C().text[id]||GEN_TEXT[id]||{t:'',p:['…']}}
+function fill(x){return String(x).replace(/\{(\w+)\}/g,(m,k)=>G&&G.my&&G.my.v[k]!==undefined?G.my.v[k]:m)}
+function traitVal(sid,i){return C().traits[i].vals[G.my.tr[sid][i]]}
+function traitP(sid,i){return C().traits[i].p.replace('{v}',traitVal(sid,i))}
+function TX(id){
+  const c=C(),my=G.my;
+  if(id.startsWith('slot:')){const sid=my.slots[+id.slice(5)],s=c.pool[sid];return{t:s.n,p:[s.doc,'Police file: '+s.n+' '+c.traits.map((t,i)=>traitP(sid,i)).join(', ')+'.']}}
+  if(id==='win'){const k=my.killer,s=c.pool[k];return{t:'Case closed',p:[s.n+' killed '+c.victim+'.',s.story,'The killer '+c.traits.map((t,i)=>traitP(k,i)).join(', ')+'. Of all five suspects, only '+s.n+' matched every finding.']}}
+  if(id==='wrongGuess'){const sid=G.lastGuess,s=c.pool[sid],i=c.traits.findIndex((t,i)=>my.tr[sid][i]!==my.tr[my.killer][i]);
+    return{t:'That doesn\'t fit',p:[s.n+' had a motive, but the evidence rules them out.','The killer '+traitP(my.killer,i)+', but '+s.n+' '+traitP(sid,i)+'.']}}
+  if(id==='notReady'){const st=progress();return{t:'Case board',p:['Photographs, string and pins. The Inspector won\'t accept an accusation until every lead has been followed.',
+    `Puzzles solved: ${st.pz} of ${st.pzN}. Physical findings: ${st.tr} of ${st.trN}. Suspects identified: ${st.sus} of 5.`,'Keep following your objectives. Press Y or Tab to see your journal.']}}
+  const T=c.text[id]||GEN_TEXT[id]||{t:'',p:['…']};return{t:fill(T.t),p:T.p.map(fill)};
+}
+function clueDef(id){const c=C();
+  if(id.startsWith('m_')){const sid=id.slice(2),s=c.pool[sid];return{t:s.n+' · motive',s:s.k,sus:sid,k:s.k}}
+  if(id.startsWith('t_')){const i=+id.slice(2),t=c.traits[i];return{t:'Finding · '+t.l,s:t.f.replace('{v}',traitVal(G.my.killer,i))}}
+  const d=c.clues[id];return d?{t:fill(d.t),s:fill(d.s)}:null}
+function clueTotal(){return Object.keys(C().clues).length+5+C().traits.length}
+function puzzleFlags(){const c=C(),f=[];for(const r in c.rooms)for(const s of c.rooms[r].spots)if(s.pz)f.push(s.pz.f);for(const L of (c.levers||[]))f.push(L.f);return f}
+function progress(){const f=puzzleFlags(),n=C().traits.length;return{pz:f.filter(x=>G.fl[x]).length,pzN:f.length,tr:G.cl.filter(c=>c.startsWith('t_')).length,trN:n,sus:G.sus.length}}
+function isReady(){const st=progress();return st.pz===st.pzN&&st.tr===st.trN&&st.sus===5}
+function pzAns(pz){return typeof pz.ans==='string'&&pz.ans[0]==='$'?G.my.ans[pz.ans.slice(1)]:pz.ans}
+function mkRand(){const r=n=>Math.floor(Math.random()*n);r.pick=(arr,k)=>{const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=r(i+1);[a[i],a[j]]=[a[j],a[i]]}return a.slice(0,k)};return r}
+function genMystery(c){
+  const r=mkRand(),ids=r.pick(Object.keys(c.pool),5),killer=ids[r(5)],n=c.traits.length;
+  const kt=c.traits.map(t=>r(t.vals.length)),tr={[killer]:kt.slice()};
+  const perm=r.pick([...Array(n).keys()],n);
+  ids.filter(i=>i!==killer).forEach((id,j)=>{const a=kt.slice(),ti=perm[j%n];let v;do{v=r(c.traits[ti].vals.length)}while(v===kt[ti]);a[ti]=v;tr[id]=a});
+  const S=c.setup(r),v={...S.v};c.traits.forEach((t,i)=>v['t'+i]=t.vals[kt[i]]);
+  if(S.cipher)v.cipher=S.cipher(c.traits.map((t,i)=>t.vals[kt[i]]));
+  return{ids,killer,tr,slots:r.pick(ids,5),v,ans:S.ans};
+}
 function itemName(i){return (C().items||{})[i]||i}
 
 /* ---------------------------- GRID ---------------------------- */
@@ -733,9 +781,9 @@ function doneObj(id){
   if(!o[1]){o[1]=1;toast('Objective complete: '+C().obj[id]);pushFx('done')}
 }
 function addClue(id){
-  const c=C().clues[id];if(!c||G.cl.includes(id))return;
-  G.cl.push(id);toast('Evidence: '+c.t);pushFx('clue');
-  if(c.sus&&!G.sus.includes(c.sus)){G.sus.push(c.sus);toast('New suspect: '+C().suspects[c.sus].n)}
+  const c=clueDef(id);if(!c||G.cl.includes(id))return;
+  G.cl.push(id);toast(id.startsWith('t_')?'Physical evidence: '+c.s:'Evidence: '+c.t);pushFx('clue');
+  if(c.sus&&!G.sus.includes(c.sus)){G.sus.push(c.sus);toast('New suspect: '+C().pool[c.sus].n)}
 }
 function applyGive(g){
   if(!g)return;
@@ -748,7 +796,7 @@ function applyGive(g){
 function lockOk(l){return (!l.i||G.it.includes(l.i))&&(!l.f||G.fl[l.f])}
 function startGame(){
   const c=C();
-  Object.assign(G,{ph:'play',rm:c.start.room,fl:{},cl:[],it:[],ob:[],sus:[],wr:0,md:null,t0:G.tm,endT:0,win:0});
+  Object.assign(G,{ph:'play',rm:c.start.room,fl:{},cl:[],it:[],ob:[],sus:[],wr:0,md:null,t0:G.tm,endT:0,win:0,my:genMystery(c)});
   for(const o of c.startObj)G.ob.push([o,0]);
   placeParty(c.start.x,c.start.y,c.start.d);
   G.md={ty:'text',id:'intro',pg:0,ow:pkey(G.pl[0]),any:1};
@@ -777,7 +825,7 @@ function interact(s,ow){
   const first=!F['s_'+s.id];F['s_'+s.id]=1;pushFx('blip');
   if(s.lock&&!lockOk(s.lock)){addObj(s.lock.o);return openText(s.lock.t,ow)}
   if(s.board){
-    if(!F.ready)return openText('notReady',ow);
+    if(!isReady())return openText('notReady',ow);
     G.md={ty:'accuse',sel:0,ow};pushFx('page');return;
   }
   if(s.pz){
@@ -791,13 +839,15 @@ function interact(s,ow){
     else if(pz.ty==='switches')m.dg=Array(n).fill(0);
     G.md=m;pushFx('page');return;
   }
+  if(s.slot!==undefined){if(first)addClue('m_'+G.my.slots[s.slot]);return openText('slot:'+s.slot,ow)}
+  if(first&&s.trait!==undefined)addClue('t_'+s.trait);
   if(first)applyGive(s.give);
   openText(!first&&s.t2?s.t2:s.t,ow);
 }
 function leverSet(id){return (C().levers||[]).find(l=>l.a===id||l.b===id)}
 function solve(s){
   const pz=s.pz,ow=G.md.ow;G.fl[pz.f]=1;pushFx('unlock');pushFx('rumble');
-  doneObj(pz.o);applyGive(pz.give);openText(pz.t,ow);
+  doneObj(pz.o);if(pz.trait!==undefined)addClue('t_'+pz.trait);applyGive(pz.give);openText(pz.t,ow);
 }
 function closeModal(){
   const m=G.md;G.md=null;
@@ -818,20 +868,20 @@ function modalInput(e){
     if(e.l){m.sel=(m.sel+n-1)%n;pushFx('tick')} if(e.r){m.sel=(m.sel+1)%n;pushFx('tick')}
     if(e.u){m.dg[m.sel]=(m.dg[m.sel]+1)%base;pushFx('tick')} if(e.d){m.dg[m.sel]=(m.dg[m.sel]+base-1)%base;pushFx('tick')}
     if(e.a){const v=m.ty==='code'?m.dg.join(''):m.dg.map(i=>String.fromCharCode(65+i)).join('');
-      if(v===pz.ans)solve(s);else{toast(m.ty==='code'?'Wrong code. It stays locked.':'The lock doesn\'t budge.');pushFx('fail')}}
+      if(v===String(pzAns(pz)))solve(s);else{toast(m.ty==='code'?'Wrong code. It stays locked.':'The lock doesn\'t budge.');pushFx('fail')}}
   } else if(m.ty==='order'){
     const n=pz.items.length;
     if(e.l){m.sel=(m.sel+n-1)%n;pushFx('tick')} if(e.r){m.sel=(m.sel+1)%n;pushFx('tick')}
     if(e.a){m.seq.push(m.sel);pushFx('note'+m.sel%5);const i=m.seq.length-1;
-      if(m.seq[i]!==pz.ans[i]){toast('That\'s not right. It resets.');pushFx('fail');m.seq=[]}
-      else if(m.seq.length===pz.ans.length)solve(s)}
+      const ans=pzAns(pz);if(m.seq[i]!==ans[i]){toast('That\'s not right. It resets.');pushFx('fail');m.seq=[]}
+      else if(m.seq.length===ans.length)solve(s)}
   } else if(m.ty==='cipher'){
     if(e.l){m.sh=(m.sh+25)%26;pushFx('tick')} if(e.r){m.sh=(m.sh+1)%26;pushFx('tick')}
-    if(e.a){if(m.sh===pz.ans)solve(s);else{toast('Still gibberish.');pushFx('fail')}}
+    if(e.a){if(m.sh===pzAns(pz))solve(s);else{toast('Still gibberish.');pushFx('fail')}}
   } else if(m.ty==='switches'){
     const n=m.dg.length;
     if(e.l){m.sel=(m.sel+n-1)%n;pushFx('tick')} if(e.r){m.sel=(m.sel+1)%n;pushFx('tick')}
-    if(e.a||e.u||e.d){m.dg[m.sel]=e.u?1:e.d?0:1-m.dg[m.sel];pushFx('switch');if(m.dg.every((v,i)=>v===pz.ans[i]))solve(s)}
+    if(e.a||e.u||e.d){m.dg[m.sel]=e.u?1:e.d?0:1-m.dg[m.sel];pushFx('switch');const ans=pzAns(pz);if(m.dg.every((v,i)=>v===ans[i]))solve(s)}
   } else if(m.ty==='journal'){
     if(e.l){m.tab=(m.tab+2)%3;m.sc=0;pushFx('tick')} if(e.r){m.tab=(m.tab+1)%3;m.sc=0;pushFx('tick')}
     if(e.u)m.sc=Math.max(0,m.sc-1); if(e.d)m.sc=m.sc+1;
@@ -840,8 +890,8 @@ function modalInput(e){
     const n=G.sus.length;
     if(e.l||e.u){m.sel=(m.sel+n-1)%n;pushFx('tick')} if(e.r||e.d){m.sel=(m.sel+1)%n;pushFx('tick')}
     if(e.a){const who=G.sus[m.sel];
-      if(who===C().killer){pushFx('win');doneObj('accuse');openText('win',m.ow)}
-      else{G.wr++;pushFx('fail');openText('wrongGuess',m.ow)}}
+      if(who===G.my.killer){pushFx('win');doneObj('accuse');openText('win',m.ow)}
+      else{G.wr++;G.lastGuess=who;pushFx('fail');openText('wrongGuess',m.ow)}}
   }
 }
 /* ---------------------------- HOST TICK ---------------------------- */
@@ -901,6 +951,7 @@ function hostTick(dt){
     }
     doorCool-=dt;
     for(const k in G.fl)if(k.startsWith('lv_')&&G.fl[k]>0)G.fl[k]=Math.max(0,G.fl[k]-dt);
+    if(!G.fl.ready&&isReady()){G.fl.ready=1;addObj('accuse');toast('Every lead followed. Name the killer at the case board.')}
     for(const L of (C().levers||[]))if(!G.fl[L.f]&&G.fl['lv_'+L.a]>0&&G.fl['lv_'+L.b]>0){G.fl[L.f]=1;G.fl['lv_'+L.a]=0;G.fl['lv_'+L.b]=0;pushFx('unlock');pushFx('rumble');toast(L.ts);applyGive(L.give)}
   } else if(G.ph==='end'){
     for(const k in edges)if(edges[k].a&&G.tm>(G.endT||0)){finishCase();return}
@@ -1157,7 +1208,7 @@ function refreshUI(msg){
   let h='';
   if(screen==='title'){
     h=`<div class="card"><div class="eyebrow">Detective casebook · 5 cases</div><h1>Harrow House</h1>
-    <p>Five murders the police couldn't solve. Search each scene in first person, crack its locks and puzzles, follow the evidence to your suspects, and name the killer.</p>
+    <p>Five murders the police couldn't solve. Every case has a new line-up of suspects and a different killer each time you play. Crack every puzzle, match the physical evidence to the police files, and name the killer.</p>
     ${msg?`<div class="note">${esc(msg)}</div>`:''}
     <div class="stack">
       <button data-nav data-act="solo">Play solo <span class="k">choose a case</span></button>
@@ -1183,7 +1234,7 @@ function refreshUI(msg){
     </div>
     <p>Look at anything that glints and examine it. Locked things give you an objective. Your journal lists objectives, evidence and suspects.</p>
     <p>Rooms are dark, but every room has a light switch beside its first door. Brass plates beside each door tell you where it leads.</p>
-    <p>When you've found the key evidence, go to the case board and name the killer from the suspects you've uncovered.</p>
+    <p>Every suspect has a motive, so motive won't settle it. Each puzzle reveals something about the killer, like their hand, their shoes or their scent, and every suspect's police file lists theirs. You need every puzzle to narrow it down to one, and the case board won't accept an accusation until every lead is followed.</p>
     ${onlineNote()}
     <div class="stack"><button data-nav data-act="back" data-back>Back</button></div></div>`;
   } else if(screen==='host'||screen==='join'){
@@ -1209,7 +1260,7 @@ function refreshUI(msg){
     </div></div>`;
   } else if(screen==='pause'){
     h=`<div class="card"><div class="eyebrow">Paused</div><h2>${G?esc(C().title):'Paused'}</h2>
-    <p>${G?G.cl.length+' of '+Object.keys(C().clues).length+' pieces of evidence · '+G.sus.length+' suspect'+(G.sus.length===1?'':'s')+' · '+fmtTime(G.tm-G.t0):''}</p>
+    <p>${G?G.cl.length+' of '+clueTotal()+' pieces of evidence · '+G.sus.length+' of 5 suspects · '+fmtTime(G.tm-G.t0):''}</p>
     ${role!=='local'?'<p class="muted">Online games keep running while this menu is open.</p>':''}
     <div class="stack"><button data-nav data-act="resume" data-back>Resume</button><button data-nav data-act="quit" class="ghost">Quit to title</button></div></div>`;
   }
@@ -1623,7 +1674,7 @@ function renderOverlay(dt,t){
   drawHud();drawObjectives();
   ctx.textAlign='center';
   G.ts.forEach((ts,i)=>{const age=G.tm-ts.t,a=Math.min(1,(4.5-age)*2);ctx.globalAlpha=Math.max(0,a);ctx.font='bold 14px '+FB;const tw=ctx.measureText(ts.s).width+28;const y=H-52-(G.ts.length-1-i)*30;
-    ctx.fillStyle='rgba(12,14,19,.9)';ctx.fillRect(W/2-tw/2,y-17,tw,26);ctx.fillStyle=ts.s.startsWith('New suspect')?'#c94a3a':ts.s.startsWith('Objective')||ts.s.startsWith('New objective')?'#7cbf6a':'#c9a24a';ctx.fillRect(W/2-tw/2,y-17,3,26);ctx.fillStyle='#e8dcc0';ctx.fillText(ts.s,W/2,y);ctx.globalAlpha=1});
+    ctx.fillStyle='rgba(12,14,19,.9)';ctx.fillRect(W/2-tw/2,y-17,tw,26);ctx.fillStyle=ts.s.startsWith('New suspect')||ts.s.startsWith('Physical')?'#c94a3a':ts.s.startsWith('Objective')||ts.s.startsWith('New objective')?'#7cbf6a':'#c9a24a';ctx.fillRect(W/2-tw/2,y-17,3,26);ctx.fillStyle='#e8dcc0';ctx.fillText(ts.s,W/2,y);ctx.globalAlpha=1});
   if(G.md)drawModal(t);
   if(G.ph==='end')drawEnd(t);
 }
@@ -1632,7 +1683,7 @@ function drawHud(){
   const r=RM();ctx.textAlign='left';ctx.font='18px '+FD;ctx.fillStyle='#e8dcc0';ctx.fillText(r.name,14,22);
   if(r.secret){const w=ctx.measureText(r.name).width;ctx.font='bold 10px '+FB;ctx.fillStyle='#c94a3a';ctx.fillText('SECRET LOCATION',24+w,21)}
   ctx.textAlign='center';ctx.font='bold 12px '+FB;ctx.fillStyle='#b9ad93';
-  ctx.fillText(`${C().title.toUpperCase()}   ·   EVIDENCE ${G.cl.length}/${Object.keys(C().clues).length}   ·   SUSPECTS ${G.sus.length}${role!=='local'&&G.code?'   ·   ROOM '+G.code:''}`,W/2,21);
+  ctx.fillText(`${C().title.toUpperCase()}   ·   EVIDENCE ${G.cl.length}/${clueTotal()}   ·   SUSPECTS ${G.sus.length}/5${role!=='local'&&G.code?'   ·   ROOM '+G.code:''}`,W/2,21);
   ctx.textAlign='right';let x=W-12;
   for(let i=G.pl.length-1;i>=0;i--){const p=G.pl[i];ctx.font='bold 11px '+FB;const w=ctx.measureText(p.n).width;ctx.fillStyle=COLORS[p.c];ctx.fillText(p.n,x,21);ctx.beginPath();ctx.arc(x-w-8,17,4,0,7);ctx.fill();x-=w+24}
 }
@@ -1679,10 +1730,10 @@ function drawModal(t){
     for(let i=0;i<n;i++){const it=pz.items[i],bx_=sx+i*(bw+gap),by=y+150,sel=i===m.sel;ctx.fillStyle=it.c;ctx.fillRect(bx_,by-(sel?14:0),bw,140);
       ctx.strokeStyle=sel?'#9b2f2f':'rgba(0,0,0,.4)';ctx.lineWidth=sel?4:1;ctx.strokeRect(bx_,by-(sel?14:0),bw,140);ctx.lineWidth=1;
       ctx.fillStyle=sel?'#9b2f2f':'#5a4a34';ctx.font='bold 13px '+FB;ctx.textAlign='center';wrap(ctx,it.n,bw+8).forEach((l,j)=>ctx.fillText(l,bx_+bw/2,by+162+j*15))}
-    ctx.textAlign='left';ctx.font='bold 13px '+FB;ctx.fillStyle='#5a4a34';ctx.fillText('So far: '+(m.seq.length?m.seq.map(i=>pz.items[i].n).join(' → '):'nothing yet')+`   (${m.seq.length}/${pz.ans.length})`,x+28,y+h-52);
+    ctx.textAlign='left';ctx.font='bold 13px '+FB;ctx.fillStyle='#5a4a34';ctx.fillText('So far: '+(m.seq.length?m.seq.map(i=>pz.items[i].n).join(' → '):'nothing yet')+`   (${m.seq.length}/${pzAns(pz).length})`,x+28,y+h-52);
     footer(x,y,w,h,`[←→] Choose  [${A_()}] Press  [${B_()}] Leave`);
   } else if(m.ty==='cipher'){
-    title(pz.title);desc(pz.desc);const enc=caesar(pz.plain,pz.ans);
+    title(pz.title);desc(pz.desc);const enc=caesar(G.my.v.cipher,pzAns(pz));
     ctx.font='bold 21px '+FB;ctx.fillStyle='#7a5a24';wrap(ctx,enc,w-60).forEach((l,i)=>ctx.fillText(l,x+28,y+170+i*26));
     ctx.fillStyle='#1a120a';wrap(ctx,caesar(enc,-m.sh),w-60).forEach((l,i)=>ctx.fillText(l,x+28,y+238+i*26));
     const ccx=x+w/2,ccy=y+325;ctx.strokeStyle='#7a5a24';ctx.lineWidth=2;ctx.beginPath();ctx.arc(ccx,ccy,30,0,7);ctx.stroke();ctx.lineWidth=1;
@@ -1699,8 +1750,8 @@ function drawModal(t){
     tabs.forEach((tb,i)=>{ctx.font=(i===m.tab?'bold ':'')+'16px '+FB;const tw=ctx.measureText(tb).width;const tx=x+28+i*170;ctx.fillStyle=i===m.tab?'#9b2f2f':'#7a6a54';ctx.fillText(tb,tx,y+44);if(i===m.tab)ctx.fillRect(tx,y+52,tw,3)});
     let rows=[];
     if(m.tab===0){rows=G.ob.slice().sort((a,b)=>a[1]-b[1]).map(o=>({t:(o[1]?'✓ ':'☐ ')+C().obj[o[0]],c:o[1]?'#8a7a64':'#1a120a'}))}
-    else if(m.tab===1){rows=G.cl.map(id=>({t:C().clues[id].t,s:C().clues[id].s,c:'#1a120a'}))}
-    else{rows=G.sus.map(id=>{const sp=C().suspects[id],ev=G.cl.filter(c=>C().clues[c].sus===id).map(c=>C().clues[c].k);return{t:sp.n+' · '+sp.r,s:ev.join(' · '),c:'#9b2f2f'}})}
+    else if(m.tab===1){rows=G.cl.map(id=>{const d=clueDef(id);return{t:d.t,s:d.s,c:id.startsWith('t_')?'#9b2f2f':'#1a120a'}})}
+    else{rows=G.sus.map(id=>{const sp=C().pool[id];return{t:sp.n+' · '+sp.r,s:'Motive: '+sp.k+'. Police file: '+C().traits.map((t,i)=>traitP(id,i)).join(', ')+'.',c:'#9b2f2f'}})}
     if(!rows.length){ctx.font='15px '+FB;ctx.fillStyle='#5a4a34';ctx.fillText(m.tab===2?'No suspects yet. Evidence will point you to them.':'Nothing yet.',x+28,y+100)}
     const per=m.tab===0?9:5;m.sc=Math.min(m.sc,Math.max(0,rows.length-per));
     rows.slice(m.sc,m.sc+per).forEach((r,i)=>{const by=y+90+i*(m.tab===0?32:56);ctx.font='bold 15px '+FB;ctx.fillStyle=r.c;ctx.fillText(r.t,x+28,by);
@@ -1708,14 +1759,17 @@ function drawModal(t){
     if(rows.length>per){ctx.font='bold 12px '+FB;ctx.fillStyle='#7a5a24';ctx.fillText(`${m.sc+1}–${Math.min(rows.length,m.sc+per)} of ${rows.length}  (↑↓ to scroll)`,x+28,y+h-48)}
     footer(x,y,w,h,`[←→] Tab  [${B_()}] Close`);
   } else if(m.ty==='accuse'){
-    title('Name the killer');desc('Choose from the suspects your evidence uncovered.');
-    const id=G.sus[m.sel],sp=C().suspects[id];
-    ctx.fillStyle='#1d1a16';ctx.fillRect(x+28,y+110,w-56,220);
-    ctx.font='28px '+FD;ctx.fillStyle='#e8dcc0';ctx.textAlign='center';ctx.fillText('‹   '+sp.n+'   ›',x+w/2,y+150);
-    ctx.font='bold 12px '+FB;ctx.fillStyle='#c9a24a';ctx.fillText(sp.r.toUpperCase()+`  ·  ${m.sel+1} OF ${G.sus.length}`,x+w/2,y+172);
-    ctx.textAlign='left';ctx.font='14px '+FB;let yy=y+204;
-    G.cl.filter(c=>C().clues[c].sus===id).slice(0,6).forEach(c=>{ctx.fillStyle='#c94a3a';ctx.fillRect(x+52,yy-8,6,6);ctx.fillStyle='#e8dcc0';ctx.fillText(C().clues[c].k+' ('+C().clues[c].t+')',x+66,yy);yy+=21});
-    if(G.wr){ctx.font='12px '+FB;ctx.fillStyle='#7a5a24';ctx.fillText(`Wrong guesses so far: ${G.wr}`,x+28,y+h-52)}
+    title('Name the killer');desc('Compare each suspect\'s police file with the physical evidence.');
+    const id=G.sus[m.sel],sp=C().pool[id];
+    ctx.fillStyle='#1d1a16';ctx.fillRect(x+28,y+106,w-56,236);
+    ctx.font='26px '+FD;ctx.fillStyle='#e8dcc0';ctx.textAlign='center';ctx.fillText('‹   '+sp.n+'   ›',x+w/2,y+142);
+    ctx.font='bold 12px '+FB;ctx.fillStyle='#c9a24a';ctx.fillText(sp.r.toUpperCase()+'  ·  MOTIVE: '+sp.k.toUpperCase(),x+w/2,y+164);
+    ctx.textAlign='left';ctx.font='bold 11px '+FB;ctx.fillStyle='#8a7a64';ctx.fillText('POLICE FILE',x+52,y+192);ctx.fillText('THE KILLER',x+330,y+192);
+    C().traits.forEach((t,i)=>{const yy=y+216+i*28,hd=v=>t.p==='{v}-handed'?v+'-handed':v,sv=hd(traitVal(id,i)),kv=hd(traitVal(G.my.killer,i)),match=sv===kv;
+      ctx.font='bold 11px '+FB;ctx.fillStyle='#8a7a64';ctx.fillText(t.l.toUpperCase(),x+200,yy+3);
+      ctx.font='14px '+FB;ctx.fillStyle='#e8dcc0';ctx.fillText(sv,x+52,yy+4);ctx.fillText(kv,x+330,yy+4);
+      ctx.font='bold 16px '+FB;ctx.fillStyle=match?'#7cbf6a':'#c94a3a';ctx.fillText(match?'✓':'✗',x+w-72,yy+4)});
+    if(G.wr){ctx.font='12px '+FB;ctx.fillStyle='#7a5a24';ctx.fillText(`Wrong guesses so far: ${G.wr}`,x+28,y+h-48)}
     footer(x,y,w,h,`[←→] Suspect  [${A_()}] Name them  [${B_()}] Back`);
   }
 }
@@ -1724,7 +1778,7 @@ function drawEnd(t){
   ctx.font='64px '+FD;ctx.fillStyle='#c9a24a';ctx.fillText('Case Closed',W/2,H/2-60);
   ctx.font='20px '+FD;ctx.fillStyle='#e8dcc0';ctx.fillText(C().title,W/2,H/2-24);
   ctx.font='15px '+FB;ctx.fillStyle='#b9ad93';
-  ctx.fillText(`Time ${fmtTime(G.tt)}   ·   Evidence ${G.cl.length} of ${Object.keys(C().clues).length}   ·   Wrong guesses ${G.wr}`,W/2,H/2+14);
+  ctx.fillText(`Time ${fmtTime(G.tt)}   ·   Evidence ${G.cl.length} of ${clueTotal()}   ·   Wrong guesses ${G.wr}`,W/2,H/2+14);
   ctx.fillText(G.pl.map(p=>p.n).join('  ·  '),W/2,H/2+40);
   if(G.tm>(G.endT||0)){ctx.fillStyle='#e8dcc0';ctx.fillText(role==='client'?'Waiting for the host…':`Press ${A_()} to continue`,W/2,H/2+96)}
 }

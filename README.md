@@ -1,6 +1,6 @@
 # Harrow House
 
-A first-person detective game for the browser. Five murder cases, each with its own map, locks and puzzles. Search the scene, complete your objectives, uncover the suspects through the evidence, and name the killer.
+A first-person detective game for the browser. Five murder cases, each with its own map, locks and puzzles. Every playthrough draws a new line-up of five suspects, a different killer, and new codes. Every suspect has a motive, so you have to solve every puzzle to uncover the physical evidence, match it against the police files, and name the one suspect who fits.
 
 **Play:** https://harrow-house.vercel.app (once deployed on Vercel)
 
