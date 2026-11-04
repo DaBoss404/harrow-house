@@ -2,7 +2,7 @@
 
 A 1–4 player co-op murder mystery that runs in the browser. Search the house, solve its puzzles, uncover the homeowner's secrets, find the hidden rooms and name the killer.
 
-**Play:** https://daboss404.github.io/harrow-house/
+**Play:** https://harrow-house.vercel.app (once deployed on Vercel)
 
 - Xbox controller support (up to 4), plus keyboard
 - Online co-op with room codes and built-in voice chat
