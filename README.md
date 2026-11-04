@@ -14,6 +14,7 @@ A first-person detective game for the browser. Five murder cases, each with its 
 ## Features
 - Solo play, or online co-op for 2–4 detectives with room codes, voice chat and text chat (`T`)
 - Xbox controller, keyboard and mouse
+- Live generated noir music for each case, room ambience (rain, sea, wind, fire, clocks), footsteps that change with the floor, and sound settings (`M` to mute)
 - Objectives for every lock and puzzle, light switches in every room, brass plates beside each door
 - Inventory (`I` or controller `X`) holding every note you read, plus keys and bagged evidence
 
