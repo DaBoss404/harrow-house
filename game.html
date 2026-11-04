@@ -103,7 +103,7 @@ CASES.harrow={
   {l:'Footwear',vals:['riding boots','city shoes','galoshes'],f:'Fresh prints in the secret passage: {v}.',p:'wears {v}'},
   {l:'Ink',vals:['green','blue','violet'],f:'The threat in Edith\'s safe is written in {v} ink.',p:'writes in {v} ink'}],
  setup(r){const h=9+r(3),m=r(60),clock=h+':'+String(m).padStart(2,'0');const books=r.pick([0,1,2,3,4,5],4);const sh=2+r(8);
-  return{v:{clock,books:books.map(b=>BOOKS[b].n).join(', then '),steps:NUMW[sh],Steps:NUMW[sh][0].toUpperCase()+NUMW[sh].slice(1)},ans:{safe:String(h)+String(m).padStart(2,'0'),books,shift:sh},cipher:t=>`THE ONE I FEAR IS ${t[1]==='left'?'LEFT':'RIGHT'} HANDED`}},
+  return{v:{clock,books:books.map(b=>BOOKS[b].n).join(', then '),steps:NUMW[sh],Steps:NUMW[sh][0].toUpperCase()+NUMW[sh].slice(1)},ans:{safe:String(h).padStart(2,'0')+String(m).padStart(2,'0'),books,shift:sh},cipher:t=>`THE ONE I FEAR IS ${t[1]==='left'?'LEFT':'RIGHT'} HANDED`}},
  pool:{
   crane:{n:'Dr. Silas Crane',r:'Edith\'s physician',k:'Edith was blackmailing him',doc:'A note from Dr. Crane: "Eight years I have paid you, Edith. Not one penny more. I would sooner see you dead."',story:'Edith had blackmailed him for years over a fatal mistake he made as a young doctor.'},
   vivian:{n:'Vivian Harrow',r:'Edith\'s niece',k:'Deep in debt to Edith',doc:'An IOU: "I, Vivian Harrow, owe my aunt £2,000." Below it, in Edith\'s hand: "Due by Christmas, or I tell the family everything."',story:'Edith threatened to expose her gambling debts to the whole family.'},
